@@ -17,14 +17,14 @@ export default function SignUp({ onSignup, onSwitchToLogin }) {
     const getPasswordStrength = (password) => {
         if (password.length < 6) return { score: 0, text: 'Too short', color: 'text-red-500' };
         if (password.length < 8) return { score: 1, text: 'Weak', color: 'text-orange-500' };
-        
+
         const hasUpper = /[A-Z]/.test(password);
         const hasLower = /[a-z]/.test(password);
         const hasNumber = /\d/.test(password);
         const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
-        
+
         const score = [hasUpper, hasLower, hasNumber, hasSpecial].filter(Boolean).length;
-        
+
         if (score < 2) return { score: 1, text: 'Weak', color: 'text-orange-500' };
         if (score < 4) return { score: 2, text: 'Medium', color: 'text-yellow-500' };
         return { score: 3, text: 'Strong', color: 'text-green-500' };
@@ -33,33 +33,33 @@ export default function SignUp({ onSignup, onSwitchToLogin }) {
     // Input validation
     const validateForm = () => {
         const newErrors = {};
-        
+
         if (!formData.firstName.trim()) {
             newErrors.firstName = 'First name is required';
         }
-        
+
         if (!formData.lastName.trim()) {
             newErrors.lastName = 'Last name is required';
         }
-        
+
         if (!formData.email.trim()) {
             newErrors.email = 'Email is required';
         } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
             newErrors.email = 'Please enter a valid email address';
         }
-        
+
         if (!formData.password) {
             newErrors.password = 'Password is required';
         } else if (formData.password.length < 6) {
             newErrors.password = 'Password must be at least 6 characters long';
         }
-        
+
         if (!formData.confirmPassword) {
             newErrors.confirmPassword = 'Please confirm your password';
         } else if (formData.password !== formData.confirmPassword) {
             newErrors.confirmPassword = 'Passwords do not match';
         }
-        
+
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
@@ -70,7 +70,7 @@ export default function SignUp({ onSignup, onSwitchToLogin }) {
             ...prev,
             [field]: value
         }));
-        
+
         // Clear error when user starts typing
         if (errors[field]) {
             setErrors(prev => ({
@@ -82,17 +82,17 @@ export default function SignUp({ onSignup, onSwitchToLogin }) {
 
     const handleSignup = async (e) => {
         e.preventDefault();
-        
+
         if (!validateForm()) {
             return;
         }
-        
+
         setIsLoading(true);
-        
+
         try {
             // Simulate API call delay
             await new Promise(resolve => setTimeout(resolve, 1500));
-            
+
             // Replace this with actual registration logic
             if (formData.email && formData.password) {
                 // Store auth state and user info
@@ -120,13 +120,13 @@ export default function SignUp({ onSignup, onSwitchToLogin }) {
                         Create Account
                     </h2>
                     <p className="text-gray-600 text-center mb-8">Join us and get started today</p>
-                    
+
                     {errors.general && (
                         <div className="mb-6 p-3 bg-red-50 border border-red-200 rounded-md">
                             <p className="text-red-600 text-sm">{errors.general}</p>
                         </div>
                     )}
-                    
+
                     <div className="space-y-5">
                         {/* Name Fields */}
                         <div className="grid grid-cols-2 gap-4">
@@ -135,11 +135,10 @@ export default function SignUp({ onSignup, onSwitchToLogin }) {
                                     First Name
                                 </label>
                                 <input
-                                    className={`w-full p-3 border rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent ${
-                                        errors.firstName 
-                                            ? 'border-red-300 bg-red-50' 
-                                            : 'border-gray-300 focus:border-green-500'
-                                    }`}
+                                    className={`w-full p-3 border rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent ${errors.firstName
+                                        ? 'border-red-300 bg-red-50'
+                                        : 'border-gray-300 focus:border-green-500'
+                                        }`}
                                     type="text"
                                     placeholder="John"
                                     value={formData.firstName}
@@ -150,17 +149,16 @@ export default function SignUp({ onSignup, onSwitchToLogin }) {
                                     <p className="mt-1 text-sm text-red-600">{errors.firstName}</p>
                                 )}
                             </div>
-                            
+
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
                                     Last Name
                                 </label>
                                 <input
-                                    className={`w-full p-3 border rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent ${
-                                        errors.lastName 
-                                            ? 'border-red-300 bg-red-50' 
-                                            : 'border-gray-300 focus:border-green-500'
-                                    }`}
+                                    className={`w-full p-3 border rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent ${errors.lastName
+                                        ? 'border-red-300 bg-red-50'
+                                        : 'border-gray-300 focus:border-green-500'
+                                        }`}
                                     type="text"
                                     placeholder="Doe"
                                     value={formData.lastName}
@@ -179,11 +177,10 @@ export default function SignUp({ onSignup, onSwitchToLogin }) {
                                 Email Address
                             </label>
                             <input
-                                className={`w-full p-3 border rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent ${
-                                    errors.email 
-                                        ? 'border-red-300 bg-red-50' 
-                                        : 'border-gray-300 focus:border-green-500'
-                                }`}
+                                className={`w-full p-3 border rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent ${errors.email
+                                    ? 'border-red-300 bg-red-50'
+                                    : 'border-gray-300 focus:border-green-500'
+                                    }`}
                                 type="email"
                                 placeholder="john.doe@example.com"
                                 value={formData.email}
@@ -202,11 +199,10 @@ export default function SignUp({ onSignup, onSwitchToLogin }) {
                             </label>
                             <div className="relative">
                                 <input
-                                    className={`w-full p-3 pr-12 border rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent ${
-                                        errors.password 
-                                            ? 'border-red-300 bg-red-50' 
-                                            : 'border-gray-300 focus:border-green-500'
-                                    }`}
+                                    className={`w-full p-3 pr-12 border rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent ${errors.password
+                                        ? 'border-red-300 bg-red-50'
+                                        : 'border-gray-300 focus:border-green-500'
+                                        }`}
                                     type={showPassword ? 'text' : 'password'}
                                     placeholder="Create a strong password"
                                     value={formData.password}
@@ -230,7 +226,7 @@ export default function SignUp({ onSignup, onSwitchToLogin }) {
                                     )}
                                 </button>
                             </div>
-                            
+
                             {formData.password && (
                                 <div className="mt-2">
                                     <div className="flex items-center justify-between text-sm">
@@ -238,18 +234,17 @@ export default function SignUp({ onSignup, onSwitchToLogin }) {
                                         <span className={passwordStrength.color}>{passwordStrength.text}</span>
                                     </div>
                                     <div className="mt-1 w-full bg-gray-200 rounded-full h-2">
-                                        <div 
-                                            className={`h-2 rounded-full transition-all duration-300 ${
-                                                passwordStrength.score === 1 ? 'bg-orange-500 w-1/3' :
+                                        <div
+                                            className={`h-2 rounded-full transition-all duration-300 ${passwordStrength.score === 1 ? 'bg-orange-500 w-1/3' :
                                                 passwordStrength.score === 2 ? 'bg-yellow-500 w-2/3' :
-                                                passwordStrength.score === 3 ? 'bg-green-500 w-full' :
-                                                'bg-red-500 w-1/6'
-                                            }`}
+                                                    passwordStrength.score === 3 ? 'bg-green-500 w-full' :
+                                                        'bg-red-500 w-1/6'
+                                                }`}
                                         />
                                     </div>
                                 </div>
                             )}
-                            
+
                             {errors.password && (
                                 <p className="mt-1 text-sm text-red-600">{errors.password}</p>
                             )}
@@ -262,11 +257,10 @@ export default function SignUp({ onSignup, onSwitchToLogin }) {
                             </label>
                             <div className="relative">
                                 <input
-                                    className={`w-full p-3 pr-12 border rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent ${
-                                        errors.confirmPassword 
-                                            ? 'border-red-300 bg-red-50' 
-                                            : 'border-gray-300 focus:border-green-500'
-                                    }`}
+                                    className={`w-full p-3 pr-12 border rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent ${errors.confirmPassword
+                                        ? 'border-red-300 bg-red-50'
+                                        : 'border-gray-300 focus:border-green-500'
+                                        }`}
                                     type={showConfirmPassword ? 'text' : 'password'}
                                     placeholder="Confirm your password"
                                     value={formData.confirmPassword}
@@ -296,7 +290,7 @@ export default function SignUp({ onSignup, onSwitchToLogin }) {
                         </div>
                     </div>
 
-                    <button 
+                    <button
                         type="button"
                         onClick={handleSignup}
                         disabled={isLoading}

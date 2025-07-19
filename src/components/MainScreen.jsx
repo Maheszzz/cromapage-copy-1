@@ -103,9 +103,8 @@ export default function MainScreen({ onLogout }) {
     <div className="flex min-h-screen bg-gray-50 text-gray-900 font-sans">
       {/* Sidebar */}
       <aside
-        className={`fixed z-50 lg:static inset-y-0 left-0 bg-white w-64 shadow-xl transition-all duration-300 ease-in-out transform ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:-translate-x-0'
-        }`}
+        className={`fixed z-50 lg:static inset-y-0 left-0 bg-white w-64 shadow-xl transition-all duration-300 ease-in-out transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:-translate-x-0'
+          }`}
       >
         <div className="h-16 bg-gradient-to-r from-rose-600 to-red-700 text-white flex items-center justify-between px-6">
           <h2 className="text-lg font-bold tracking-tight">Contacts App</h2>

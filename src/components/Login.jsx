@@ -11,19 +11,19 @@ export default function Login({ onLogin, onSwitchToSignup }) {
 
     const validateForm = () => {
         const newErrors = {};
-        
+
         if (!formData.email.trim()) {
             newErrors.email = 'Email is required';
         } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
             newErrors.email = 'Please enter a valid email address';
         }
-        
+
         if (!formData.password) {
             newErrors.password = 'Password is required';
         } else if (formData.password.length < 6) {
             newErrors.password = 'Password must be at least 6 characters long';
         }
-        
+
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
@@ -34,7 +34,7 @@ export default function Login({ onLogin, onSwitchToSignup }) {
             ...prev,
             [field]: value
         }));
-        
+
         if (errors[field]) {
             setErrors(prev => ({
                 ...prev,
@@ -45,16 +45,16 @@ export default function Login({ onLogin, onSwitchToSignup }) {
 
     const handleLogin = async (e) => {
         e.preventDefault();
-        
+
         if (!validateForm()) {
             return;
         }
-        
+
         setIsLoading(true);
-        
+
         try {
             await new Promise(resolve => setTimeout(resolve, 1000));
-            
+
             if (formData.email && formData.password) {
                 sessionStorage.setItem('isLoggedIn', 'true');
                 sessionStorage.setItem('userEmail', formData.email);
@@ -75,13 +75,13 @@ export default function Login({ onLogin, onSwitchToSignup }) {
                 <h2 className="text-3xl font-bold mb-8 text-center text-gray-900 tracking-tight">
                     Welcome Back
                 </h2>
-                
+
                 {errors.general && (
                     <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-lg">
                         <p className="text-red-700 text-sm font-medium">{errors.general}</p>
                     </div>
                 )}
-                
+
                 <div className="space-y-6">
                     <div>
                         <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
@@ -91,11 +91,10 @@ export default function Login({ onLogin, onSwitchToSignup }) {
                             <Mail className="absolute top-3 left-3 w-5 h-5 text-gray-400" />
                             <input
                                 id="email"
-                                className={`w-full pl-10 pr-4 py-3 border rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-400 ${
-                                    errors.email 
-                                        ? 'border-red-300 bg-red-50' 
+                                className={`w-full pl-10 pr-4 py-3 border rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-400 ${errors.email
+                                        ? 'border-red-300 bg-red-50'
                                         : 'border-gray-200 hover:border-gray-300'
-                                }`}
+                                    }`}
                                 type="email"
                                 placeholder="Enter your email"
                                 value={formData.email}
@@ -118,11 +117,10 @@ export default function Login({ onLogin, onSwitchToSignup }) {
                             <Lock className="absolute top-3 left-3 w-5 h-5 text-gray-400" />
                             <input
                                 id="password"
-                                className={`w-full pl-10 pr-4 py-3 border rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-400 ${
-                                    errors.password 
-                                        ? 'border-red-300 bg-red-50' 
+                                className={`w-full pl-10 pr-4 py-3 border rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-400 ${errors.password
+                                        ? 'border-red-300 bg-red-50'
                                         : 'border-gray-200 hover:border-gray-300'
-                                }`}
+                                    }`}
                                 type="password"
                                 placeholder="Enter your password"
                                 value={formData.password}
@@ -138,7 +136,7 @@ export default function Login({ onLogin, onSwitchToSignup }) {
                     </div>
                 </div>
 
-                <button 
+                <button
                     type="button"
                     onClick={handleLogin}
                     disabled={isLoading}
