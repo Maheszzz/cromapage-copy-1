@@ -17,7 +17,9 @@ export default function MainScreen({ onLogout }) {
   const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeMenuItem, setActiveMenuItem] = useState('Academic');
-  
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage] = useState(10);
+
   const profileRef = useRef(null);
   const filterRef = useRef(null);
   const LOCAL_KEY = 'localStudents';
@@ -167,6 +169,20 @@ export default function MainScreen({ onLogout }) {
 
   const sidebarWidth = sidebarCollapsed ? 'w-16' : 'w-64';
 
+  // Pagination Logic
+  const indexOfLastRow = currentPage * rowsPerPage;
+  const indexOfFirstRow = indexOfLastRow - rowsPerPage;
+  const currentRows = filteredStudents.slice(indexOfFirstRow, indexOfLastRow);
+  const totalPages = Math.ceil(filteredStudents.length / rowsPerPage);
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) setCurrentPage(currentPage - 1);
+  };
+
   return (
     <div className="flex min-h-screen bg-gray-50">
       {/* Dark Sidebar */}
@@ -175,9 +191,6 @@ export default function MainScreen({ onLogout }) {
         <div className="h-16 flex items-center justify-between px-4 border-b border-gray-700">
           {!sidebarCollapsed && (
             <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">A</span>
-              </div>
               <span className="font-semibold text-lg">MyApp</span>
             </div>
           )}
@@ -196,14 +209,14 @@ export default function MainScreen({ onLogout }) {
             {menuItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeMenuItem === item.name;
-              
+
               return (
                 <li key={item.name}>
                   <button
                     onClick={() => setActiveMenuItem(item.name)}
-                    className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors duration-200 text-left
-                      ${isActive 
-                        ? 'bg-blue-600 text-white shadow-lg' 
+                    className={`w-full flex items-center space-x-2 px-1 py-2 rounded-lg transition-colors duration-200 text-left
+                      ${isActive
+                        ? 'bg-blue-600 text-white shadow-lg'
                         : 'text-gray-300 hover:bg-gray-800 hover:text-white'
                       }`}
                     title={sidebarCollapsed ? item.name : ''}
@@ -333,8 +346,8 @@ export default function MainScreen({ onLogout }) {
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   <th className="p-4 text-left">
-                    <input 
-                      type="checkbox" 
+                    <input
+                      type="checkbox"
                       className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                     />
                   </th>
@@ -358,23 +371,23 @@ export default function MainScreen({ onLogout }) {
                       </div>
                     </td>
                   </tr>
-                ) : filteredStudents.length === 0 ? (
+                ) : currentRows.length === 0 ? (
                   <tr>
                     <td colSpan="9" className="text-center p-8 text-gray-500">
                       No students found matching your criteria.
                     </td>
                   </tr>
                 ) : (
-                  filteredStudents.map((student, index) => (
-                    <tr 
-                      key={student.id} 
+                  currentRows.map((student, index) => (
+                    <tr
+                      key={student.id}
                       className={`border-t border-gray-100 hover:bg-blue-50/50 transition-colors
                         ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}
                       `}
                     >
                       <td className="p-4">
-                        <input 
-                          type="checkbox" 
+                        <input
+                          type="checkbox"
                           className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                         />
                       </td>
@@ -393,16 +406,16 @@ export default function MainScreen({ onLogout }) {
                       </td>
                       <td className="p-4">
                         <div className="flex items-center space-x-2">
-                          <button 
-                            onClick={() => handleEditStudent(student)} 
-                            title="Edit Student" 
+                          <button
+                            onClick={() => handleEditStudent(student)}
+                            title="Edit Student"
                             className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
                           >
                             <Edit3 size={16} />
                           </button>
-                          <button 
-                            onClick={() => handleDeleteStudent(student.id)} 
-                            title="Delete Student" 
+                          <button
+                            onClick={() => handleDeleteStudent(student.id)}
+                            title="Delete Student"
                             className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
                           >
                             <Trash2 size={16} />
@@ -415,6 +428,29 @@ export default function MainScreen({ onLogout }) {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination Controls */}
+          {!loading && filteredStudents.length > 0 && (
+            <div className="flex justify-between items-center px-6 py-4 bg-white border-t border-gray-200">
+              <button
+                onClick={handlePrevPage}
+                disabled={currentPage === 1}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed transition-colors"
+              >
+                Previous
+              </button>
+              <span className="text-sm text-gray-600">
+                Page {currentPage} of {totalPages}
+              </span>
+              <button
+                onClick={handleNextPage}
+                disabled={currentPage === totalPages}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed transition-colors"
+              >
+                Next
+              </button>
+            </div>
+          )}
         </main>
       </div>
 
@@ -449,15 +485,15 @@ export default function MainScreen({ onLogout }) {
                   </div>
                 ))}
                 <div className="flex justify-end space-x-3 pt-4">
-                  <button 
-                    type="button" 
-                    onClick={() => setEditModalOpen(false)} 
+                  <button
+                    type="button"
+                    onClick={() => setEditModalOpen(false)}
                     className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors font-medium"
                   >
                     Cancel
                   </button>
-                  <button 
-                    type="submit" 
+                  <button
+                    type="submit"
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
                   >
                     Save Changes
