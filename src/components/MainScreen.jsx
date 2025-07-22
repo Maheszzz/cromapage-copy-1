@@ -9,7 +9,9 @@ import {
   X,
   User,
   LogOut,
+  Trash2,
 } from 'lucide-react';
+import AddStudentModal from './AddStudentModal';
 
 export default function MainScreen({ onLogout }) {
   const [students, setStudents] = useState([]);
@@ -18,35 +20,23 @@ export default function MainScreen({ onLogout }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
+  const [addModalOpen, setAddModalOpen] = useState(false);
   const [currentStudent, setCurrentStudent] = useState(null);
   const profileRef = useRef(null);
 
   useEffect(() => {
     const fetchStudents = async () => {
       setLoading(true);
-      await new Promise((res) => setTimeout(res, 1000));
-      const mockData = [
-        {
-          id: 1,
-          firstName: 'Venaika',
-          lastName: 'Gfrg',
-          company: 'Founder',
-          phone: '+91 456456456',
-          email: 'venaika@yopmail.com',
-          designation: 'CEO',
-        },
-        {
-          id: 2,
-          firstName: 'Maheswaran',
-          lastName: 'Ghgdf',
-          company: 'CEO',
-          phone: '+91 888888855',
-          email: 'rgxfhb@yopmail.com',
-          designation: 'Manager',
-        },
-      ];
-      setStudents(mockData);
-      setLoading(false);
+      try {
+        const response = await fetch('https://687b2e57b4bc7cfbda84e292.mockapi.io/users');
+        if (!response.ok) throw new Error('Failed to fetch students');
+        const data = await response.json();
+        setStudents(data);
+      } catch (error) {
+        console.error('Error fetching students:', error);
+      } finally {
+        setLoading(false);
+      }
     };
     fetchStudents();
   }, []);
@@ -63,19 +53,30 @@ export default function MainScreen({ onLogout }) {
 
   const handleLogout = () => {
     sessionStorage.removeItem('isLoggedIn');
-    setProfileOpen(false); // Close dropdown before logout
-    onLogout(); // Trigger parent logout function
+    setProfileOpen(false);
+    onLogout();
   };
 
   const filteredStudents = students.filter((s) =>
-    [s.firstName, s.lastName, s.email, s.company]
+    [s.firstname, s.lastname, s.mail, s.role]
       .join(' ')
       .toLowerCase()
       .includes(searchTerm.toLowerCase())
   );
 
-  const handleAddStudent = () => {
-    alert('Add student logic goes here.');
+  const handleAddStudent = async (newStudent) => {
+    try {
+      const response = await fetch('https://687b2e57b4bc7cfbda84e292.mockapi.io/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newStudent),
+      });
+      if (!response.ok) throw new Error('Failed to add student');
+      const addedStudent = await response.json();
+      setStudents((prev) => [addedStudent, ...prev]);
+    } catch (error) {
+      console.error('Error adding student:', error);
+    }
   };
 
   const handleEditStudent = (student) => {
@@ -83,15 +84,40 @@ export default function MainScreen({ onLogout }) {
     setEditModalOpen(true);
   };
 
-  const handleUpdateStudent = (e) => {
+  const handleDeleteStudent = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this student?')) return;
+    try {
+      const response = await fetch(`https://687b2e57b4bc7cfbda84e292.mockapi.io/users/${id}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) throw new Error('Failed to delete student');
+      setStudents((prev) => prev.filter((student) => student.id !== id));
+    } catch (error) {
+      console.error('Error deleting student:', error);
+    }
+  };
+
+  const handleUpdateStudent = async (e) => {
     e.preventDefault();
-    setStudents(
-      students.map((s) =>
-        s.id === currentStudent.id ? { ...currentStudent } : s
-      )
-    );
-    setEditModalOpen(false);
-    setCurrentStudent(null);
+    try {
+      const response = await fetch(
+        `https://687b2e57b4bc7cfbda84e292.mockapi.io/users/${currentStudent.id}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(currentStudent),
+        }
+      );
+      if (!response.ok) throw new Error('Failed to update student');
+      const updatedStudent = await response.json();
+      setStudents(
+        students.map((s) => (s.id === updatedStudent.id ? updatedStudent : s))
+      );
+      setEditModalOpen(false);
+      setCurrentStudent(null);
+    } catch (error) {
+      console.error('Error updating student:', error);
+    }
   };
 
   const handleInputChange = (e) => {
@@ -103,8 +129,11 @@ export default function MainScreen({ onLogout }) {
     <div className="flex min-h-screen bg-gray-50 text-gray-900 font-sans">
       {/* Sidebar */}
       <aside
-        className={`fixed z-50 lg:static inset-y-0 left-0 bg-white w-64 shadow-xl transition-all duration-300 ease-in-out transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:-translate-x-0'
-          }`}
+        className={`fixed z-50 lg:static inset-y-0 left-0 bg-white w-64 shadow-xl transition-all duration-300 ease-in-out transform ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:-translate-x-0'
+        } lg:hover:translate-x-0`}
+        onMouseEnter={() => setSidebarOpen(true)} // Show on hover
+        onMouseLeave={() => setSidebarOpen(false)} // Hide on hover out
       >
         <div className="h-16 bg-gradient-to-r from-rose-600 to-red-700 text-white flex items-center justify-between px-6">
           <h2 className="text-lg font-bold tracking-tight">Contacts App</h2>
@@ -191,7 +220,7 @@ export default function MainScreen({ onLogout }) {
               </button>
             </div>
             <button
-              onClick={handleAddStudent}
+              onClick={() => setAddModalOpen(true)}
               className="flex items-center bg-rose-600 text-white px-4 py-2 rounded-lg hover:bg-rose-700 transition-colors duration-200"
             >
               <Plus size={16} className="mr-2" />
@@ -214,17 +243,18 @@ export default function MainScreen({ onLogout }) {
                   </th>
                   <th className="p-4 text-left font-semibold text-gray-700">First Name</th>
                   <th className="p-4 text-left font-semibold text-gray-700">Last Name</th>
-                  <th className="p-4 text-left font-semibold text-gray-700">Company</th>
+                  <th className="p-4 text-left font-semibold text-gray-700">Age</th>
                   <th className="p-4 text-left font-semibold text-gray-700">Phone</th>
                   <th className="p-4 text-left font-semibold text-gray-700">Email</th>
-                  <th className="p-4 text-left font-semibold text-gray-700">Designation</th>
+                  <th className="p-4 text-left font-semibold text-gray-700">Role</th>
+                  <th className="p-4 text-left font-semibold text-gray-700">Date</th>
                   <th className="p-4 text-left font-semibold text-gray-700">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="8" className="text-center p-8">
+                    <td colSpan="9" className="text-center p-8">
                       <div className="flex flex-col items-center justify-center">
                         <div className="w-6 h-6 border-2 border-rose-600 border-t-transparent rounded-full animate-spin" />
                         <p className="mt-3 text-gray-500 font-medium">Loading students...</p>
@@ -233,7 +263,7 @@ export default function MainScreen({ onLogout }) {
                   </tr>
                 ) : filteredStudents.length === 0 ? (
                   <tr>
-                    <td colSpan="8" className="text-center p-6 text-gray-500 font-medium">
+                    <td colSpan="9" className="text-center p-6 text-gray-500 font-medium">
                       No students found.
                     </td>
                   </tr>
@@ -249,18 +279,27 @@ export default function MainScreen({ onLogout }) {
                           className="rounded border-gray-300 text-rose-600 focus:ring-rose-500"
                         />
                       </td>
-                      <td className="p-4 text-gray-800">{student.firstName}</td>
-                      <td className="p-4 text-gray-800">{student.lastName}</td>
-                      <td className="p-4 text-gray-800">{student.company}</td>
+                      <td className="p-4 text-gray-800">{student.firstname}</td>
+                      <td className="p-4 text-gray-800">{student.lastname}</td>
+                      <td className="p-4 text-gray-800">{student.age}</td>
                       <td className="p-4 text-gray-800">{student.phone}</td>
-                      <td className="p-4 text-gray-800">{student.email}</td>
-                      <td className="p-4 text-gray-800">{student.designation}</td>
-                      <td className="p-4">
+                      <td className="p-4 text-gray-800">{student.mail}</td>
+                      <td className="p-4 text-gray-800">{student.role}</td>
+                      <td className="p-4 text-gray-800">
+                        {new Date(student.date).toLocaleDateString()}
+                      </td>
+                      <td className="p-4 flex gap-2">
                         <button
                           onClick={() => handleEditStudent(student)}
                           className="text-rose-600 hover:text-rose-800 transition-colors duration-150"
                         >
                           <Edit3 size={16} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteStudent(student.id)}
+                          className="text-red-600 hover:text-red-800 transition-colors duration-150"
+                        >
+                          <Trash2 size={16} />
                         </button>
                       </td>
                     </tr>
@@ -282,8 +321,8 @@ export default function MainScreen({ onLogout }) {
                     <label className="block text-sm font-medium text-gray-700">First Name</label>
                     <input
                       type="text"
-                      name="firstName"
-                      value={currentStudent?.firstName || ''}
+                      name="firstname"
+                      value={currentStudent?.firstname || ''}
                       onChange={handleInputChange}
                       className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-rose-500 outline-none"
                       required
@@ -293,19 +332,19 @@ export default function MainScreen({ onLogout }) {
                     <label className="block text-sm font-medium text-gray-700">Last Name</label>
                     <input
                       type="text"
-                      name="lastName"
-                      value={currentStudent?.lastName || ''}
+                      name="lastname"
+                      value={currentStudent?.lastname || ''}
                       onChange={handleInputChange}
                       className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-rose-500 outline-none"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Company</label>
+                    <label className="block text-sm font-medium text-gray-700">Age</label>
                     <input
-                      type="text"
-                      name="company"
-                      value={currentStudent?.company || ''}
+                      type="number"
+                      name="age"
+                      value={currentStudent?.age || ''}
                       onChange={handleInputChange}
                       className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-rose-500 outline-none"
                       required
@@ -326,19 +365,19 @@ export default function MainScreen({ onLogout }) {
                     <label className="block text-sm font-medium text-gray-700">Email</label>
                     <input
                       type="email"
-                      name="email"
-                      value={currentStudent?.email || ''}
+                      name="mail"
+                      value={currentStudent?.mail || ''}
                       onChange={handleInputChange}
                       className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-rose-500 outline-none"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Designation</label>
+                    <label className="block text-sm font-medium text-gray-700">Role</label>
                     <input
                       type="text"
-                      name="designation"
-                      value={currentStudent?.designation || ''}
+                      name="role"
+                      value={currentStudent?.role || ''}
                       onChange={handleInputChange}
                       className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-rose-500 outline-none"
                       required
@@ -364,6 +403,13 @@ export default function MainScreen({ onLogout }) {
             </div>
           </div>
         )}
+
+        {/* Add Student Modal */}
+        <AddStudentModal
+          isOpen={addModalOpen}
+          onClose={() => setAddModalOpen(false)}
+          onAddStudent={handleAddStudent}
+        />
       </div>
     </div>
   );
