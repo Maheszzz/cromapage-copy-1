@@ -22,7 +22,10 @@ export default function MainScreen({ onLogout }) {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [currentStudent, setCurrentStudent] = useState(null);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [filterType, setFilterType] = useState('all');
   const profileRef = useRef(null);
+  const filterRef = useRef(null);
 
   // Helper to get/set local students
   const LOCAL_KEY = 'localStudents';
@@ -72,18 +75,42 @@ export default function MainScreen({ onLogout }) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Close filter dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (filterRef.current && !filterRef.current.contains(event.target)) {
+        setFilterOpen(false);
+      }
+    }
+    if (filterOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [filterOpen]);
+
   const handleLogout = () => {
     sessionStorage.removeItem('isLoggedIn');
     setProfileOpen(false);
     onLogout();
   };
 
-  const filteredStudents = students.filter((s) =>
-    [s.firstname, s.lastname, s.mail, s.role]
-      .join(' ')
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase())
-  );
+  // Enhanced filter logic
+  const filteredStudents = students.filter((s) => {
+    const term = searchTerm.toLowerCase();
+    if (!term) return true;
+    if (filterType === 'all') {
+      return [s.firstname, s.lastname, s.mail, s.role, s.phone, String(s.age)]
+        .join(' ')
+        .toLowerCase()
+        .includes(term);
+    }
+    if (filterType === 'firstname') return s.firstname?.toLowerCase().includes(term);
+    if (filterType === 'lastname') return s.lastname?.toLowerCase().includes(term);
+    if (filterType === 'phone') return s.phone?.toLowerCase().includes(term);
+    if (filterType === 'age') return String(s.age).includes(term);
+    if (filterType === 'role') return s.role?.toLowerCase().includes(term);
+    return true;
+  });
 
   const handleAddStudent = async (newStudent) => {
     try {
@@ -230,16 +257,65 @@ export default function MainScreen({ onLogout }) {
                 <Search className="absolute top-3 left-3 w-5 h-5 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Search students..."
+                  placeholder={`Search students${filterType !== 'all' ? ` by ${filterType}` : ''}...`}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-rose-500 transition-all duration-200 outline-none"
                 />
               </div>
-              <button className="flex items-center border border-gray-200 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors duration-200">
-                <Filter size={16} className="mr-2" />
-                Filter
-              </button>
+              <div className="relative" ref={filterRef}>
+                <button
+                  type="button"
+                  className="flex items-center border border-gray-200 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors duration-200"
+                  onClick={() => setFilterOpen((v) => !v)}
+                >
+                  <Filter size={16} className="mr-2" />
+                  Filter
+                  <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {filterOpen && (
+                  <div className="absolute left-0 mt-2 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                    <button
+                      className={`block w-full text-left px-4 py-2 hover:bg-gray-100 ${filterType === 'all' ? 'font-semibold text-rose-600' : ''}`}
+                      onClick={() => { setFilterType('all'); setFilterOpen(false); }}
+                    >
+                      All
+                    </button>
+                    <button
+                      className={`block w-full text-left px-4 py-2 hover:bg-gray-100 ${filterType === 'firstname' ? 'font-semibold text-rose-600' : ''}`}
+                      onClick={() => { setFilterType('firstname'); setFilterOpen(false); }}
+                    >
+                      First Name
+                    </button>
+                    <button
+                      className={`block w-full text-left px-4 py-2 hover:bg-gray-100 ${filterType === 'lastname' ? 'font-semibold text-rose-600' : ''}`}
+                      onClick={() => { setFilterType('lastname'); setFilterOpen(false); }}
+                    >
+                      Last Name
+                    </button>
+                    <button
+                      className={`block w-full text-left px-4 py-2 hover:bg-gray-100 ${filterType === 'phone' ? 'font-semibold text-rose-600' : ''}`}
+                      onClick={() => { setFilterType('phone'); setFilterOpen(false); }}
+                    >
+                      Phone
+                    </button>
+                    <button
+                      className={`block w-full text-left px-4 py-2 hover:bg-gray-100 ${filterType === 'age' ? 'font-semibold text-rose-600' : ''}`}
+                      onClick={() => { setFilterType('age'); setFilterOpen(false); }}
+                    >
+                      Age
+                    </button>
+                    <button
+                      className={`block w-full text-left px-4 py-2 hover:bg-gray-100 ${filterType === 'role' ? 'font-semibold text-rose-600' : ''}`}
+                      onClick={() => { setFilterType('role'); setFilterOpen(false); }}
+                    >
+                      Role
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
             <button
               onClick={() => setAddModalOpen(true)}
