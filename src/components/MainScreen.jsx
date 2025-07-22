@@ -1,13 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  Plus,
-  Search,
-  Edit3,
-  Menu,
-  X,
-  User,
-  LogOut,
-  Trash2,
+  Plus, Search, Edit3, User, LogOut, Trash2, Filter, X,
+  Home, DollarSign, Plane, GraduationCap, Menu, ChevronLeft
 } from 'lucide-react';
 import AddStudentModal from './AddStudentModal';
 
@@ -20,10 +14,21 @@ export default function MainScreen({ onLogout }) {
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [currentStudent, setCurrentStudent] = useState(null);
   const [filterType, setFilterType] = useState('all');
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [activeMenuItem, setActiveMenuItem] = useState('Academic');
+  
   const profileRef = useRef(null);
-
+  const filterRef = useRef(null);
   const LOCAL_KEY = 'localStudents';
+
+  // Sidebar menu items with icons
+  const menuItems = [
+    { name: 'Home', icon: Home, path: '/home' },
+    { name: 'Finance', icon: DollarSign, path: '/finance' },
+    { name: 'Travel', icon: Plane, path: '/travel' },
+    { name: 'Academic', icon: GraduationCap, path: '/academic' },
+  ];
 
   const getLocalStudents = () => {
     try {
@@ -63,6 +68,9 @@ export default function MainScreen({ onLogout }) {
     const handleClickOutside = (event) => {
       if (profileRef.current && !profileRef.current.contains(event.target)) {
         setProfileOpen(false);
+      }
+      if (filterRef.current && !filterRef.current.contains(event.target)) {
+        setFilterDropdownOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -157,80 +165,98 @@ export default function MainScreen({ onLogout }) {
     { key: 'role', label: 'Role' },
   ];
 
+  const sidebarWidth = sidebarCollapsed ? 'w-16' : 'w-64';
+
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 flex">
-      {/* Sidebar */}
-      <aside
-        className={`fixed top-0 left-0 h-full w-64 bg-white shadow-md z-50 transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-          } lg:translate-x-0 lg:w-64`}
-      >
-        <div className="flex items-center justify-between px-6 h-16 bg-rose-600 text-white">
-          <h2 className="text-lg font-bold">Menu</h2>
+    <div className="flex min-h-screen bg-gray-50">
+      {/* Dark Sidebar */}
+      <aside className={`${sidebarWidth} bg-gray-900 text-white flex-shrink-0 transition-all duration-300 ease-in-out relative`}>
+        {/* Sidebar Header */}
+        <div className="h-16 flex items-center justify-between px-4 border-b border-gray-700">
+          {!sidebarCollapsed && (
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">A</span>
+              </div>
+              <span className="font-semibold text-lg">MyApp</span>
+            </div>
+          )}
           <button
-            onClick={() => setSidebarOpen(false)}
-            className="p-2 hover:bg-rose-700 rounded-full lg:hidden"
-            aria-label="Close Sidebar"
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
+            aria-label="Toggle Sidebar"
           >
-            <X size={22} />
+            {sidebarCollapsed ? <Menu size={20} /> : <ChevronLeft size={20} />}
           </button>
         </div>
-        <nav className="p-4 space-y-2">
-          <a
-            href="#"
-            onClick={() => setSidebarOpen(false)}
-            className="flex items-center gap-3 px-4 py-2 bg-rose-50 text-rose-600 rounded-lg hover:bg-rose-100 transition-colors"
-          >
-            <User size={18} />
-            Contacts
-          </a>
-          <button
-            onClick={() => {
-              setAddModalOpen(true);
-              setSidebarOpen(false);
-            }}
-            className="flex items-center gap-2 px-4 py-2 w-full bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition"
-          >
-            <Plus size={18} />
-            Add Contact
-          </button>
+
+        {/* Navigation Menu */}
+        <nav className="flex-1 p-4">
+          <ul className="space-y-2">
+            {menuItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeMenuItem === item.name;
+              
+              return (
+                <li key={item.name}>
+                  <button
+                    onClick={() => setActiveMenuItem(item.name)}
+                    className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors duration-200 text-left
+                      ${isActive 
+                        ? 'bg-blue-600 text-white shadow-lg' 
+                        : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                      }`}
+                    title={sidebarCollapsed ? item.name : ''}
+                  >
+                    <Icon size={20} className="flex-shrink-0" />
+                    {!sidebarCollapsed && (
+                      <span className="font-medium">{item.name}</span>
+                    )}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
         </nav>
+
+        {/* Sidebar Footer */}
+        <div className="p-4 border-t border-gray-700">
+          <div className={`flex items-center space-x-3 ${sidebarCollapsed ? 'justify-center' : ''}`}>
+            <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center">
+              <User size={16} />
+            </div>
+            {!sidebarCollapsed && (
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-white truncate">John Doe</p>
+                <p className="text-xs text-gray-400 truncate">john@example.com</p>
+              </div>
+            )}
+          </div>
+        </div>
       </aside>
-      {/* Overlay when sidebar is open (on mobile) */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-30 z-40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        ></div>
-      )}
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col ml-0 lg:ml-64 transition-all duration-300">
+      <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <header className="w-full bg-white shadow flex justify-between items-center px-6 h-16">
+        <header className="bg-white shadow-sm border-b flex justify-between items-center px-6 h-16">
           <div className="flex items-center gap-4">
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="text-gray-700 hover:text-rose-600 block lg:hidden"
-              aria-label="Open Sidebar"
-            >
-              <Menu size={24} />
-            </button>
-            <h1 className="text-2xl font-bold text-rose-700">Students</h1>
+            <h1 className="text-2xl font-bold text-gray-800">Students Dashboard</h1>
+            <span className="px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-full">
+              {activeMenuItem}
+            </span>
           </div>
           <div className="relative" ref={profileRef}>
             <button
               onClick={() => setProfileOpen(!profileOpen)}
-              className="flex items-center gap-2 p-2 rounded-full hover:bg-gray-100"
-              aria-label="Profile"
+              className="p-2 rounded-full hover:bg-gray-100 transition-colors"
             >
-              <User size={20} />
+              <User size={20} className="text-gray-600" />
             </button>
             {profileOpen && (
               <div className="absolute right-0 mt-2 w-44 bg-white shadow-lg border rounded-xl py-2 z-50">
                 <button
                   onClick={handleLogout}
-                  className="flex items-center w-full gap-2 px-4 py-2 hover:bg-rose-50 text-gray-700"
-                  aria-label="Logout"
+                  className="flex items-center w-full gap-2 px-4 py-2 hover:bg-red-50 text-red-600 transition-colors"
                 >
                   <LogOut size={16} /> Logout
                 </button>
@@ -238,98 +264,150 @@ export default function MainScreen({ onLogout }) {
             )}
           </div>
         </header>
+
         {/* Toolbar */}
-        <div className="px-6 py-4 bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm">
+        <div className="px-6 py-4 bg-white border-b shadow-sm">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            {/* Search */}
-            <div className="relative md:w-80 w-full">
-              <Search className="absolute top-3 left-3 w-5 h-5 text-gray-400" />
-              <input
-                type="text"
-                placeholder={`Search${filterType !== 'all' ? ` by ${filterType}` : ''}...`}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-10 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 shadow-sm outline-none"
-              />
-              {searchTerm && (
+            <div className="relative flex items-center md:w-auto w-full">
+              <div className="relative md:w-80 w-full">
+                <Search className="absolute top-3 left-3 w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder={`Search students${filterType !== 'all' ? ` by ${filterType}` : ''}...`}
+                  className="w-full pl-10 pr-10 py-2 text-sm border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                />
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm('')}
+                    className="absolute top-2.5 right-3 text-gray-400 hover:text-gray-600"
+                  >
+                    <X size={18} />
+                  </button>
+                )}
+              </div>
+              <div className="relative ml-2" ref={filterRef}>
                 <button
-                  onClick={() => setSearchTerm('')}
-                  className="absolute top-2.5 right-3 text-gray-400 hover:text-gray-600"
+                  onClick={() => setFilterDropdownOpen(!filterDropdownOpen)}
+                  className="flex items-center gap-2 bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 px-3 py-2 rounded-lg transition-colors shadow-sm"
                 >
-                  <X size={18} />
+                  <Filter size={16} />
+                  {!sidebarCollapsed && <span className="hidden sm:inline">Filter</span>}
                 </button>
-              )}
+                {filterDropdownOpen && (
+                  <div className="absolute top-full mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                    {filterOptions.map(({ key, label }) => (
+                      <button
+                        key={key}
+                        onClick={() => {
+                          setFilterType(key);
+                          setFilterDropdownOpen(false);
+                        }}
+                        className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 transition-colors
+                          ${filterType === key ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-700'}
+                        `}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-            {/* Filters */}
-            <div className="flex flex-wrap gap-2">
-              {filterOptions.map(({ key, label }) => (
-                <button
-                  key={key}
-                  onClick={() => setFilterType(key)}
-                  className={`px-3 py-1 text-sm rounded-full border transition ${filterType === key
-                      ? 'bg-rose-600 text-white border-rose-600'
-                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
-                    }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            {/* Add Button (for desktop only) */}
+
             <button
               onClick={() => setAddModalOpen(true)}
-              className="hidden md:flex items-center gap-2 bg-rose-600 text-white px-4 py-2 rounded-lg hover:bg-rose-700 shadow-sm text-sm"
-              aria-label="Add student"
+              className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 shadow-sm text-sm font-medium transition-colors"
             >
               <Plus size={16} />
               Add Student
             </button>
           </div>
         </div>
+
         {/* Table */}
         <main className="flex-1 p-6 overflow-x-auto">
-          <div className="bg-white rounded-xl shadow-md overflow-hidden">
+          <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
             <table className="min-w-full text-sm">
-              <thead className="bg-gray-100 sticky top-0 z-10">
+              <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="p-4"></th>
-                  <th className="p-4 text-left">First Name</th>
-                  <th className="p-4 text-left">Last Name</th>
-                  <th className="p-4 text-left">Age</th>
-                  <th className="p-4 text-left">Phone</th>
-                  <th className="p-4 text-left">Email</th>
-                  <th className="p-4 text-left">Role</th>
-                  <th className="p-4 text-left">Date</th>
-                  <th className="p-4 text-left">Actions</th>
+                  <th className="p-4 text-left">
+                    <input 
+                      type="checkbox" 
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                  </th>
+                  <th className="p-4 text-left font-semibold text-gray-700">First Name</th>
+                  <th className="p-4 text-left font-semibold text-gray-700">Last Name</th>
+                  <th className="p-4 text-left font-semibold text-gray-700">Age</th>
+                  <th className="p-4 text-left font-semibold text-gray-700">Phone</th>
+                  <th className="p-4 text-left font-semibold text-gray-700">Email</th>
+                  <th className="p-4 text-left font-semibold text-gray-700">Role</th>
+                  <th className="p-4 text-left font-semibold text-gray-700">Date</th>
+                  <th className="p-4 text-left font-semibold text-gray-700">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="9" className="text-center p-6">Loading...</td>
+                    <td colSpan="9" className="text-center p-8">
+                      <div className="flex items-center justify-center space-x-2">
+                        <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                        <span className="text-gray-500">Loading students...</span>
+                      </div>
+                    </td>
                   </tr>
                 ) : filteredStudents.length === 0 ? (
                   <tr>
-                    <td colSpan="9" className="text-center p-6 text-gray-500">No students found.</td>
+                    <td colSpan="9" className="text-center p-8 text-gray-500">
+                      No students found matching your criteria.
+                    </td>
                   </tr>
                 ) : (
-                  filteredStudents.map((student) => (
-                    <tr key={student.id} className="border-t border-gray-100 hover:bg-rose-50">
-                      <td className="p-4"><input type="checkbox" /></td>
-                      <td className="p-4">{student.firstname}</td>
-                      <td className="p-4">{student.lastname}</td>
-                      <td className="p-4">{student.age}</td>
-                      <td className="p-4">{student.phone}</td>
-                      <td className="p-4">{student.mail}</td>
-                      <td className="p-4">{student.role}</td>
-                      <td className="p-4">{student.date ? new Date(student.date).toLocaleDateString() : ''}</td>
-                      <td className="p-4 flex gap-2">
-                        <button onClick={() => handleEditStudent(student)} title="Edit" className="text-rose-600 hover:text-rose-800">
-                          <Edit3 size={16} />
-                        </button>
-                        <button onClick={() => handleDeleteStudent(student.id)} title="Delete" className="text-red-600 hover:text-red-800">
-                          <Trash2 size={16} />
-                        </button>
+                  filteredStudents.map((student, index) => (
+                    <tr 
+                      key={student.id} 
+                      className={`border-t border-gray-100 hover:bg-blue-50/50 transition-colors
+                        ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}
+                      `}
+                    >
+                      <td className="p-4">
+                        <input 
+                          type="checkbox" 
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                      </td>
+                      <td className="p-4 text-gray-900 font-medium">{student.firstname}</td>
+                      <td className="p-4 text-gray-900">{student.lastname}</td>
+                      <td className="p-4 text-gray-700">{student.age}</td>
+                      <td className="p-4 text-gray-700">{student.phone}</td>
+                      <td className="p-4 text-gray-700">{student.mail}</td>
+                      <td className="p-4">
+                        <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
+                          {student.role}
+                        </span>
+                      </td>
+                      <td className="p-4 text-gray-700">
+                        {student.date ? new Date(student.date).toLocaleDateString() : ''}
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center space-x-2">
+                          <button 
+                            onClick={() => handleEditStudent(student)} 
+                            title="Edit Student" 
+                            className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
+                          >
+                            <Edit3 size={16} />
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteStudent(student.id)} 
+                            title="Delete Student" 
+                            className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -338,39 +416,65 @@ export default function MainScreen({ onLogout }) {
             </table>
           </div>
         </main>
-        {/* Edit Modal */}
-        {editModalOpen && currentStudent && (
-          <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50">
-            <div className="bg-white rounded-lg p-6 shadow-xl max-w-md w-full">
-              <h3 className="text-lg font-bold text-rose-700 mb-4">Edit Student</h3>
-              <form onSubmit={handleUpdateStudent} className="space-y-3">
+      </div>
+
+      {/* Edit Modal */}
+      {editModalOpen && currentStudent && (
+        <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold text-gray-900">Edit Student</h3>
+                <button
+                  onClick={() => setEditModalOpen(false)}
+                  className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <X size={20} className="text-gray-500" />
+                </button>
+              </div>
+              <form onSubmit={handleUpdateStudent} className="space-y-4">
                 {['firstname', 'lastname', 'age', 'phone', 'mail', 'role'].map((field) => (
                   <div key={field}>
-                    <label className="block text-sm capitalize font-medium">{field}</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1 capitalize">
+                      {field === 'mail' ? 'Email' : field.replace(/([A-Z])/g, ' $1')}
+                    </label>
                     <input
                       name={field}
+                      type={field === 'age' ? 'number' : field === 'mail' ? 'email' : 'text'}
                       value={currentStudent[field] || ''}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 outline-none"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
                     />
                   </div>
                 ))}
-                <div className="flex justify-end gap-3 pt-4">
-                  <button type="button" onClick={() => setEditModalOpen(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
-                  <button type="submit" className="px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700">Save</button>
+                <div className="flex justify-end space-x-3 pt-4">
+                  <button 
+                    type="button" 
+                    onClick={() => setEditModalOpen(false)} 
+                    className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors font-medium"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit" 
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                  >
+                    Save Changes
+                  </button>
                 </div>
               </form>
             </div>
           </div>
-        )}
-        {/* Add Student Modal */}
-        <AddStudentModal
-          isOpen={addModalOpen}
-          onClose={() => setAddModalOpen(false)}
-          onAddStudent={handleAddStudent}
-        />
-      </div>
+        </div>
+      )}
+
+      {/* Add Modal */}
+      <AddStudentModal
+        isOpen={addModalOpen}
+        onClose={() => setAddModalOpen(false)}
+        onAddStudent={handleAddStudent}
+      />
     </div>
   );
 }
