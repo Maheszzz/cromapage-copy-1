@@ -24,6 +24,23 @@ export default function MainScreen({ onLogout }) {
   const [currentStudent, setCurrentStudent] = useState(null);
   const profileRef = useRef(null);
 
+  // Helper to get/set local students
+  const LOCAL_KEY = 'localStudents';
+
+  const getLocalStudents = () => {
+    try {
+      return JSON.parse(localStorage.getItem(LOCAL_KEY)) || [];
+    } catch {
+      return [];
+    }
+  };
+
+  const saveLocalStudent = (student) => {
+    const localStudents = getLocalStudents();
+    localStudents.unshift(student);
+    localStorage.setItem(LOCAL_KEY, JSON.stringify(localStudents));
+  };
+
   useEffect(() => {
     const fetchStudents = async () => {
       setLoading(true);
@@ -31,7 +48,11 @@ export default function MainScreen({ onLogout }) {
         const response = await fetch('https://687b2e57b4bc7cfbda84e292.mockapi.io/users');
         if (!response.ok) throw new Error('Failed to fetch students');
         const data = await response.json();
-        setStudents(data);
+        // Remove duplicates (by id or email) and prepend local students
+        const localStudents = getLocalStudents();
+        const localIds = new Set(localStudents.map(s => s.id || s.mail));
+        const filteredApi = data.filter(s => !localIds.has(s.id || s.mail));
+        setStudents([...localStudents, ...filteredApi]);
       } catch (error) {
         console.error('Error fetching students:', error);
       } finally {
@@ -73,6 +94,8 @@ export default function MainScreen({ onLogout }) {
       });
       if (!response.ok) throw new Error('Failed to add student');
       const addedStudent = await response.json();
+      // Save to localStorage and update state
+      saveLocalStudent(addedStudent);
       setStudents((prev) => [addedStudent, ...prev]);
     } catch (error) {
       console.error('Error adding student:', error);
@@ -129,9 +152,8 @@ export default function MainScreen({ onLogout }) {
     <div className="flex min-h-screen bg-gray-50 text-gray-900 font-sans">
       {/* Sidebar */}
       <aside
-        className={`fixed z-50 lg:static inset-y-0 left-0 bg-white w-64 shadow-xl transition-all duration-300 ease-in-out transform ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:-translate-x-0'
-        } lg:hover:translate-x-0`}
+        className={`fixed z-50 lg:static inset-y-0 left-0 bg-white w-64 shadow-xl transition-all duration-300 ease-in-out transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:-translate-x-0'
+          } lg:hover:translate-x-0`}
         onMouseEnter={() => setSidebarOpen(true)} // Show on hover
         onMouseLeave={() => setSidebarOpen(false)} // Hide on hover out
       >
