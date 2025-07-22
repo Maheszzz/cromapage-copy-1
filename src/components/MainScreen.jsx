@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  Users,
   Plus,
   Search,
-  Filter,
   Edit3,
   Menu,
   X,
@@ -17,17 +15,14 @@ export default function MainScreen({ onLogout }) {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [currentStudent, setCurrentStudent] = useState(null);
-  const [filterOpen, setFilterOpen] = useState(false);
   const [filterType, setFilterType] = useState('all');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const profileRef = useRef(null);
-  const filterRef = useRef(null);
 
-  // Helper to get/set local students
   const LOCAL_KEY = 'localStudents';
 
   const getLocalStudents = () => {
@@ -51,10 +46,9 @@ export default function MainScreen({ onLogout }) {
         const response = await fetch('https://687b2e57b4bc7cfbda84e292.mockapi.io/users');
         if (!response.ok) throw new Error('Failed to fetch students');
         const data = await response.json();
-        // Remove duplicates (by id or email) and prepend local students
         const localStudents = getLocalStudents();
-        const localIds = new Set(localStudents.map(s => s.id || s.mail));
-        const filteredApi = data.filter(s => !localIds.has(s.id || s.mail));
+        const localIds = new Set(localStudents.map((s) => s.id || s.mail));
+        const filteredApi = data.filter((s) => !localIds.has(s.id || s.mail));
         setStudents([...localStudents, ...filteredApi]);
       } catch (error) {
         console.error('Error fetching students:', error);
@@ -75,26 +69,11 @@ export default function MainScreen({ onLogout }) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Close filter dropdown on outside click
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (filterRef.current && !filterRef.current.contains(event.target)) {
-        setFilterOpen(false);
-      }
-    }
-    if (filterOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [filterOpen]);
-
   const handleLogout = () => {
     sessionStorage.removeItem('isLoggedIn');
-    setProfileOpen(false);
     onLogout();
   };
 
-  // Enhanced filter logic
   const filteredStudents = students.filter((s) => {
     const term = searchTerm.toLowerCase();
     if (!term) return true;
@@ -104,12 +83,7 @@ export default function MainScreen({ onLogout }) {
         .toLowerCase()
         .includes(term);
     }
-    if (filterType === 'firstname') return s.firstname?.toLowerCase().includes(term);
-    if (filterType === 'lastname') return s.lastname?.toLowerCase().includes(term);
-    if (filterType === 'phone') return s.phone?.toLowerCase().includes(term);
-    if (filterType === 'age') return String(s.age).includes(term);
-    if (filterType === 'role') return s.role?.toLowerCase().includes(term);
-    return true;
+    return String(s[filterType] || '').toLowerCase().includes(term);
   });
 
   const handleAddStudent = async (newStudent) => {
@@ -121,7 +95,6 @@ export default function MainScreen({ onLogout }) {
       });
       if (!response.ok) throw new Error('Failed to add student');
       const addedStudent = await response.json();
-      // Save to localStorage and update state
       saveLocalStudent(addedStudent);
       setStudents((prev) => [addedStudent, ...prev]);
     } catch (error) {
@@ -135,13 +108,13 @@ export default function MainScreen({ onLogout }) {
   };
 
   const handleDeleteStudent = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this student?')) return;
+    if (!window.confirm('Delete this student?')) return;
     try {
       const response = await fetch(`https://687b2e57b4bc7cfbda84e292.mockapi.io/users/${id}`, {
         method: 'DELETE',
       });
-      if (!response.ok) throw new Error('Failed to delete student');
-      setStudents((prev) => prev.filter((student) => student.id !== id));
+      if (!response.ok) throw new Error('Delete failed');
+      setStudents((prev) => prev.filter((s) => s.id !== id));
     } catch (error) {
       console.error('Error deleting student:', error);
     }
@@ -158,10 +131,10 @@ export default function MainScreen({ onLogout }) {
           body: JSON.stringify(currentStudent),
         }
       );
-      if (!response.ok) throw new Error('Failed to update student');
+      if (!response.ok) throw new Error('Update failed');
       const updatedStudent = await response.json();
-      setStudents(
-        students.map((s) => (s.id === updatedStudent.id ? updatedStudent : s))
+      setStudents((prev) =>
+        prev.map((s) => (s.id === updatedStudent.id ? updatedStudent : s))
       );
       setEditModalOpen(false);
       setCurrentStudent(null);
@@ -175,233 +148,186 @@ export default function MainScreen({ onLogout }) {
     setCurrentStudent((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Sidebar width in px (matches w-64)
-  const SIDEBAR_WIDTH = 256;
+  const filterOptions = [
+    { key: 'all', label: 'All' },
+    { key: 'firstname', label: 'First Name' },
+    { key: 'lastname', label: 'Last Name' },
+    { key: 'phone', label: 'Phone' },
+    { key: 'age', label: 'Age' },
+    { key: 'role', label: 'Role' },
+  ];
 
   return (
-    <div className="flex min-h-screen bg-gray-50 text-gray-900 font-sans relative">
+    <div className="min-h-screen bg-gray-50 text-gray-900 flex">
       {/* Sidebar */}
       <aside
-        className={`
-          h-full bg-white shadow-xl z-30 transition-all duration-300 ease-in-out
-          fixed top-0 left-0
-        `}
-        style={{
-          width: sidebarOpen ? SIDEBAR_WIDTH : 0,
-          minWidth: 0,
-          overflow: 'hidden',
-        }}
+        className={`fixed top-0 left-0 h-full w-64 bg-white shadow-md z-50 transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          } lg:translate-x-0 lg:w-64`}
       >
-        <div className="h-16 bg-gradient-to-r from-rose-600 to-red-700 text-white flex items-center justify-between px-6">
-          <h2 className="text-lg font-bold tracking-tight">Contacts App</h2>
+        <div className="flex items-center justify-between px-6 h-16 bg-rose-600 text-white">
+          <h2 className="text-lg font-bold">Menu</h2>
           <button
-            className="hover:bg-red-800/20 p-1 rounded-md transition-colors"
             onClick={() => setSidebarOpen(false)}
+            className="p-2 hover:bg-rose-700 rounded-full lg:hidden"
+            aria-label="Close Sidebar"
           >
-            <X size={24} />
+            <X size={22} />
           </button>
         </div>
-        <nav className="mt-6 px-4 space-y-2">
+        <nav className="p-4 space-y-2">
           <a
             href="#"
-            className="flex items-center gap-3 px-4 py-3 text-rose-600 bg-rose-50 rounded-lg font-medium hover:bg-rose-100 transition-colors"
+            onClick={() => setSidebarOpen(false)}
+            className="flex items-center gap-3 px-4 py-2 bg-rose-50 text-rose-600 rounded-lg hover:bg-rose-100 transition-colors"
           >
-            <Users size={20} />
+            <User size={18} />
             Contacts
           </a>
+          <button
+            onClick={() => {
+              setAddModalOpen(true);
+              setSidebarOpen(false);
+            }}
+            className="flex items-center gap-2 px-4 py-2 w-full bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition"
+          >
+            <Plus size={18} />
+            Add Contact
+          </button>
         </nav>
       </aside>
+      {/* Overlay when sidebar is open (on mobile) */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-30 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        ></div>
+      )}
 
       {/* Main Content */}
-      <div
-        className={`flex-1 flex flex-col transition-all duration-300 ease-in-out`}
-        style={{
-          marginLeft: sidebarOpen ? SIDEBAR_WIDTH : 0,
-        }}
-      >
+      <div className="flex-1 flex flex-col ml-0 lg:ml-64 transition-all duration-300">
         {/* Header */}
-        <header className="h-16 bg-white shadow-sm px-6 flex items-center justify-between">
+        <header className="w-full bg-white shadow flex justify-between items-center px-6 h-16">
           <div className="flex items-center gap-4">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="text-gray-600 hover:text-rose-600 transition-colors"
+              className="text-gray-700 hover:text-rose-600 block lg:hidden"
+              aria-label="Open Sidebar"
             >
               <Menu size={24} />
             </button>
-            <h1 className="text-xl font-bold text-rose-800">Students</h1>
+            <h1 className="text-2xl font-bold text-rose-700">Students</h1>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="relative" ref={profileRef}>
-              <button
-                onClick={() => setProfileOpen(!profileOpen)}
-                className="flex items-center gap-2 text-gray-600 hover:text-rose-600 transition-colors"
-              >
-                <User size={20} />
-                <span className="font-medium">Profile</span>
-              </button>
-              {profileOpen && (
-                <div className="absolute right-0 mt-2 w-48 bg-white shadow-lg rounded-lg py-2 z-50 border border-gray-100">
-                  <button
-                    onClick={handleLogout}
-                    className="flex items-center w-full gap-2 px-4 py-2 text-gray-600 hover:bg-rose-50 hover:text-rose-600 transition-colors"
-                  >
-                    <LogOut size={16} />
-                    Logout
-                  </button>
-                </div>
-              )}
-            </div>
+          <div className="relative" ref={profileRef}>
+            <button
+              onClick={() => setProfileOpen(!profileOpen)}
+              className="flex items-center gap-2 p-2 rounded-full hover:bg-gray-100"
+              aria-label="Profile"
+            >
+              <User size={20} />
+            </button>
+            {profileOpen && (
+              <div className="absolute right-0 mt-2 w-44 bg-white shadow-lg border rounded-xl py-2 z-50">
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center w-full gap-2 px-4 py-2 hover:bg-rose-50 text-gray-700"
+                  aria-label="Logout"
+                >
+                  <LogOut size={16} /> Logout
+                </button>
+              </div>
+            )}
           </div>
         </header>
-
-        {/* Search and Add Student */}
-        <div className="p-6 bg-white border-b border-gray-200">
-          <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
-            <div className="flex flex-col sm:flex-row gap-4 items-center w-full sm:w-auto">
-              <div className="relative w-full sm:w-1/2">
-                <Search className="absolute top-3 left-3 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder={`Search students${filterType !== 'all' ? ` by ${filterType}` : ''}...`}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-rose-500 transition-all duration-200 outline-none"
-                />
-              </div>
-              <div className="relative" ref={filterRef}>
+        {/* Toolbar */}
+        <div className="px-6 py-4 bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            {/* Search */}
+            <div className="relative md:w-80 w-full">
+              <Search className="absolute top-3 left-3 w-5 h-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder={`Search${filterType !== 'all' ? ` by ${filterType}` : ''}...`}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-10 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 shadow-sm outline-none"
+              />
+              {searchTerm && (
                 <button
-                  type="button"
-                  className="flex items-center border border-gray-200 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors duration-200"
-                  onClick={() => setFilterOpen((v) => !v)}
+                  onClick={() => setSearchTerm('')}
+                  className="absolute top-2.5 right-3 text-gray-400 hover:text-gray-600"
                 >
-                  <Filter size={16} className="mr-2" />
-                  Filter
-                  <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
+                  <X size={18} />
                 </button>
-                {filterOpen && (
-                  <div className="absolute left-0 mt-2 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
-                    <button
-                      className={`block w-full text-left px-4 py-2 hover:bg-gray-100 ${filterType === 'all' ? 'font-semibold text-rose-600' : ''}`}
-                      onClick={() => { setFilterType('all'); setFilterOpen(false); }}
-                    >
-                      All
-                    </button>
-                    <button
-                      className={`block w-full text-left px-4 py-2 hover:bg-gray-100 ${filterType === 'firstname' ? 'font-semibold text-rose-600' : ''}`}
-                      onClick={() => { setFilterType('firstname'); setFilterOpen(false); }}
-                    >
-                      First Name
-                    </button>
-                    <button
-                      className={`block w-full text-left px-4 py-2 hover:bg-gray-100 ${filterType === 'lastname' ? 'font-semibold text-rose-600' : ''}`}
-                      onClick={() => { setFilterType('lastname'); setFilterOpen(false); }}
-                    >
-                      Last Name
-                    </button>
-                    <button
-                      className={`block w-full text-left px-4 py-2 hover:bg-gray-100 ${filterType === 'phone' ? 'font-semibold text-rose-600' : ''}`}
-                      onClick={() => { setFilterType('phone'); setFilterOpen(false); }}
-                    >
-                      Phone
-                    </button>
-                    <button
-                      className={`block w-full text-left px-4 py-2 hover:bg-gray-100 ${filterType === 'age' ? 'font-semibold text-rose-600' : ''}`}
-                      onClick={() => { setFilterType('age'); setFilterOpen(false); }}
-                    >
-                      Age
-                    </button>
-                    <button
-                      className={`block w-full text-left px-4 py-2 hover:bg-gray-100 ${filterType === 'role' ? 'font-semibold text-rose-600' : ''}`}
-                      onClick={() => { setFilterType('role'); setFilterOpen(false); }}
-                    >
-                      Role
-                    </button>
-                  </div>
-                )}
-              </div>
+              )}
             </div>
+            {/* Filters */}
+            <div className="flex flex-wrap gap-2">
+              {filterOptions.map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => setFilterType(key)}
+                  className={`px-3 py-1 text-sm rounded-full border transition ${filterType === key
+                      ? 'bg-rose-600 text-white border-rose-600'
+                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+                    }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {/* Add Button (for desktop only) */}
             <button
               onClick={() => setAddModalOpen(true)}
-              className="flex items-center bg-rose-600 text-white px-4 py-2 rounded-lg hover:bg-rose-700 transition-colors duration-200"
+              className="hidden md:flex items-center gap-2 bg-rose-600 text-white px-4 py-2 rounded-lg hover:bg-rose-700 shadow-sm text-sm"
+              aria-label="Add student"
             >
-              <Plus size={16} className="mr-2" />
+              <Plus size={16} />
               Add Student
             </button>
           </div>
         </div>
-
         {/* Table */}
-        <main className="p-6 overflow-auto flex-1">
-          <div className="bg-white shadow-md rounded-xl overflow-hidden">
+        <main className="flex-1 p-6 overflow-x-auto">
+          <div className="bg-white rounded-xl shadow-md overflow-hidden">
             <table className="min-w-full text-sm">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="bg-gray-100 sticky top-0 z-10">
                 <tr>
-                  <th className="p-4 text-left">
-                    <input
-                      type="checkbox"
-                      className="rounded border-gray-300 text-rose-600 focus:ring-rose-500"
-                    />
-                  </th>
-                  <th className="p-4 text-left font-semibold text-gray-700">First Name</th>
-                  <th className="p-4 text-left font-semibold text-gray-700">Last Name</th>
-                  <th className="p-4 text-left font-semibold text-gray-700">Age</th>
-                  <th className="p-4 text-left font-semibold text-gray-700">Phone</th>
-                  <th className="p-4 text-left font-semibold text-gray-700">Email</th>
-                  <th className="p-4 text-left font-semibold text-gray-700">Role</th>
-                  <th className="p-4 text-left font-semibold text-gray-700">Date</th>
-                  <th className="p-4 text-left font-semibold text-gray-700">Actions</th>
+                  <th className="p-4"></th>
+                  <th className="p-4 text-left">First Name</th>
+                  <th className="p-4 text-left">Last Name</th>
+                  <th className="p-4 text-left">Age</th>
+                  <th className="p-4 text-left">Phone</th>
+                  <th className="p-4 text-left">Email</th>
+                  <th className="p-4 text-left">Role</th>
+                  <th className="p-4 text-left">Date</th>
+                  <th className="p-4 text-left">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="9" className="text-center p-8">
-                      <div className="flex flex-col items-center justify-center">
-                        <div className="w-6 h-6 border-2 border-rose-600 border-t-transparent rounded-full animate-spin" />
-                        <p className="mt-3 text-gray-500 font-medium">Loading students...</p>
-                      </div>
-                    </td>
+                    <td colSpan="9" className="text-center p-6">Loading...</td>
                   </tr>
                 ) : filteredStudents.length === 0 ? (
                   <tr>
-                    <td colSpan="9" className="text-center p-6 text-gray-500 font-medium">
-                      No students found.
-                    </td>
+                    <td colSpan="9" className="text-center p-6 text-gray-500">No students found.</td>
                   </tr>
                 ) : (
                   filteredStudents.map((student) => (
-                    <tr
-                      key={student.id}
-                      className="border-t border-gray-100 hover:bg-rose-50/50 transition-colors duration-150"
-                    >
-                      <td className="p-4">
-                        <input
-                          type="checkbox"
-                          className="rounded border-gray-300 text-rose-600 focus:ring-rose-500"
-                        />
-                      </td>
-                      <td className="p-4 text-gray-800">{student.firstname}</td>
-                      <td className="p-4 text-gray-800">{student.lastname}</td>
-                      <td className="p-4 text-gray-800">{student.age}</td>
-                      <td className="p-4 text-gray-800">{student.phone}</td>
-                      <td className="p-4 text-gray-800">{student.mail}</td>
-                      <td className="p-4 text-gray-800">{student.role}</td>
-                      <td className="p-4 text-gray-800">
-                        {new Date(student.date).toLocaleDateString()}
-                      </td>
+                    <tr key={student.id} className="border-t border-gray-100 hover:bg-rose-50">
+                      <td className="p-4"><input type="checkbox" /></td>
+                      <td className="p-4">{student.firstname}</td>
+                      <td className="p-4">{student.lastname}</td>
+                      <td className="p-4">{student.age}</td>
+                      <td className="p-4">{student.phone}</td>
+                      <td className="p-4">{student.mail}</td>
+                      <td className="p-4">{student.role}</td>
+                      <td className="p-4">{student.date ? new Date(student.date).toLocaleDateString() : ''}</td>
                       <td className="p-4 flex gap-2">
-                        <button
-                          onClick={() => handleEditStudent(student)}
-                          className="text-rose-600 hover:text-rose-800 transition-colors duration-150"
-                        >
+                        <button onClick={() => handleEditStudent(student)} title="Edit" className="text-rose-600 hover:text-rose-800">
                           <Edit3 size={16} />
                         </button>
-                        <button
-                          onClick={() => handleDeleteStudent(student.id)}
-                          className="text-red-600 hover:text-red-800 transition-colors duration-150"
-                        >
+                        <button onClick={() => handleDeleteStudent(student.id)} title="Delete" className="text-red-600 hover:text-red-800">
                           <Trash2 size={16} />
                         </button>
                       </td>
@@ -412,101 +338,32 @@ export default function MainScreen({ onLogout }) {
             </table>
           </div>
         </main>
-
         {/* Edit Modal */}
-        {editModalOpen && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl p-6 w-full max-w-md">
-              <h2 className="text-lg font-bold text-rose-800 mb-4">Edit Student</h2>
-              <form onSubmit={handleUpdateStudent}>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">First Name</label>
+        {editModalOpen && currentStudent && (
+          <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50">
+            <div className="bg-white rounded-lg p-6 shadow-xl max-w-md w-full">
+              <h3 className="text-lg font-bold text-rose-700 mb-4">Edit Student</h3>
+              <form onSubmit={handleUpdateStudent} className="space-y-3">
+                {['firstname', 'lastname', 'age', 'phone', 'mail', 'role'].map((field) => (
+                  <div key={field}>
+                    <label className="block text-sm capitalize font-medium">{field}</label>
                     <input
-                      type="text"
-                      name="firstname"
-                      value={currentStudent?.firstname || ''}
+                      name={field}
+                      value={currentStudent[field] || ''}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-rose-500 outline-none"
                       required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 outline-none"
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Last Name</label>
-                    <input
-                      type="text"
-                      name="lastname"
-                      value={currentStudent?.lastname || ''}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-rose-500 outline-none"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Age</label>
-                    <input
-                      type="number"
-                      name="age"
-                      value={currentStudent?.age || ''}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-rose-500 outline-none"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Phone</label>
-                    <input
-                      type="text"
-                      name="phone"
-                      value={currentStudent?.phone || ''}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-rose-500 outline-none"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Email</label>
-                    <input
-                      type="email"
-                      name="mail"
-                      value={currentStudent?.mail || ''}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-rose-500 outline-none"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Role</label>
-                    <input
-                      type="text"
-                      name="role"
-                      value={currentStudent?.role || ''}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-rose-500 outline-none"
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="mt-6 flex gap-4 justify-end">
-                  <button
-                    type="button"
-                    onClick={() => setEditModalOpen(false)}
-                    className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors"
-                  >
-                    Save
-                  </button>
+                ))}
+                <div className="flex justify-end gap-3 pt-4">
+                  <button type="button" onClick={() => setEditModalOpen(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
+                  <button type="submit" className="px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700">Save</button>
                 </div>
               </form>
             </div>
           </div>
         )}
-
         {/* Add Student Modal */}
         <AddStudentModal
           isOpen={addModalOpen}
