@@ -331,7 +331,7 @@ export default function MainScreen({ onLogout }) {
 
             <button
               onClick={() => setAddModalOpen(true)}
-              className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 shadow-sm text-sm font-medium transition-colors"
+              className="flex items-center gap-2 bg-gray-900 text-white px-4 py-2 rounded-lg hover:bg-blue-700 shadow-sm text-sm font-medium transition-colors"
             >
               <Plus size={16} />
               Add Student

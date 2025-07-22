@@ -38,10 +38,10 @@ const AddStudentModal = ({ isOpen, onClose, onAddStudent }) => {
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-white rounded-xl p-6 w-full max-w-md">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-bold text-rose-800">Add New Student</h2>
+          <h2 className="text-lg font-bold text-gray-900">Add New Student</h2>
           <button
             onClick={onClose}
-            className="text-gray-600 hover:text-rose-600 transition-colors"
+            className="text-gray-600 hover:text-gray-900 transition-colors"
           >
             <X size={20} />
           </button>
@@ -55,7 +55,7 @@ const AddStudentModal = ({ isOpen, onClose, onAddStudent }) => {
                 name="firstname"
                 value={newStudent.firstname}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-rose-500 outline-none"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 outline-none"
                 required
               />
             </div>
@@ -66,7 +66,7 @@ const AddStudentModal = ({ isOpen, onClose, onAddStudent }) => {
                 name="lastname"
                 value={newStudent.lastname}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-rose-500 outline-none"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 outline-none"
                 required
               />
             </div>
@@ -77,7 +77,7 @@ const AddStudentModal = ({ isOpen, onClose, onAddStudent }) => {
                 name="age"
                 value={newStudent.age}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-rose-500 outline-none"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 outline-none"
                 required
               />
             </div>
@@ -88,7 +88,7 @@ const AddStudentModal = ({ isOpen, onClose, onAddStudent }) => {
                 name="phone"
                 value={newStudent.phone}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-rose-500 outline-none"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 outline-none"
                 required
               />
             </div>
@@ -99,7 +99,7 @@ const AddStudentModal = ({ isOpen, onClose, onAddStudent }) => {
                 name="mail"
                 value={newStudent.mail}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-rose-500 outline-none"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 outline-none"
                 required
               />
             </div>
@@ -110,7 +110,7 @@ const AddStudentModal = ({ isOpen, onClose, onAddStudent }) => {
                 name="role"
                 value={newStudent.role}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-rose-500 outline-none"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 outline-none"
                 required
               />
             </div>
@@ -125,7 +125,7 @@ const AddStudentModal = ({ isOpen, onClose, onAddStudent }) => {
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors"
+              className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
             >
               Add Student
             </button>
