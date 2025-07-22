@@ -175,19 +175,27 @@ export default function MainScreen({ onLogout }) {
     setCurrentStudent((prev) => ({ ...prev, [name]: value }));
   };
 
+  // Sidebar width in px (matches w-64)
+  const SIDEBAR_WIDTH = 256;
+
   return (
-    <div className="flex min-h-screen bg-gray-50 text-gray-900 font-sans">
+    <div className="flex min-h-screen bg-gray-50 text-gray-900 font-sans relative">
       {/* Sidebar */}
       <aside
-        className={`fixed z-50 lg:static inset-y-0 left-0 bg-white w-64 shadow-xl transition-all duration-300 ease-in-out transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:-translate-x-0'
-          } lg:hover:translate-x-0`}
-        onMouseEnter={() => setSidebarOpen(true)} // Show on hover
-        onMouseLeave={() => setSidebarOpen(false)} // Hide on hover out
+        className={`
+          h-full bg-white shadow-xl z-30 transition-all duration-300 ease-in-out
+          fixed top-0 left-0
+        `}
+        style={{
+          width: sidebarOpen ? SIDEBAR_WIDTH : 0,
+          minWidth: 0,
+          overflow: 'hidden',
+        }}
       >
         <div className="h-16 bg-gradient-to-r from-rose-600 to-red-700 text-white flex items-center justify-between px-6">
           <h2 className="text-lg font-bold tracking-tight">Contacts App</h2>
           <button
-            className="lg:hidden hover:bg-red-800/20 p-1 rounded-md transition-colors"
+            className="hover:bg-red-800/20 p-1 rounded-md transition-colors"
             onClick={() => setSidebarOpen(false)}
           >
             <X size={24} />
@@ -204,22 +212,19 @@ export default function MainScreen({ onLogout }) {
         </nav>
       </aside>
 
-      {/* Overlay */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
       {/* Main Content */}
-      <div className="flex-1 flex flex-col">
+      <div
+        className={`flex-1 flex flex-col transition-all duration-300 ease-in-out`}
+        style={{
+          marginLeft: sidebarOpen ? SIDEBAR_WIDTH : 0,
+        }}
+      >
         {/* Header */}
         <header className="h-16 bg-white shadow-sm px-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="lg:hidden text-gray-600 hover:text-rose-600 transition-colors"
+              className="text-gray-600 hover:text-rose-600 transition-colors"
             >
               <Menu size={24} />
             </button>
