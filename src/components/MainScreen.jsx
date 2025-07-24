@@ -1,41 +1,164 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Plus, Search, Edit3, User, LogOut, Trash2, Filter, X,
   Home, DollarSign, Plane, GraduationCap, Menu, ChevronLeft
 } from 'lucide-react';
 import AddStudentModal from './AddStudentModal';
 
+import {
+  AppBar as MuiAppBar, Toolbar, Typography, Button, Container, Box, CssBaseline,
+  Drawer as MuiDrawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, 
+  IconButton, Menu as MuiMenu, MenuItem, TextField, Table, TableBody, TableCell, 
+  TableHead, TableRow, TableContainer, Paper, Dialog, DialogTitle, DialogContent, 
+  DialogActions, InputAdornment, Checkbox, Pagination, CircularProgress, Avatar, 
+  createTheme, ThemeProvider, styled
+} from '@mui/material';
+
+// --- Mini Variant Drawer Styled Components ---
+const drawerWidth = 240;
+
+const openedMixin = (theme) => ({
+  width: drawerWidth,
+  transition: theme.transitions.create('width', {
+    easing: theme.transitions.easing.sharp,
+    duration: theme.transitions.duration.enteringScreen,
+  }),
+  overflowX: 'hidden',
+});
+
+const closedMixin = (theme) => ({
+  transition: theme.transitions.create('width', {
+    easing: theme.transitions.easing.sharp,
+    duration: theme.transitions.duration.leavingScreen,
+  }),
+  overflowX: 'hidden',
+  width: `calc(${theme.spacing(7)} + 1px)`,
+  [theme.breakpoints.up('sm')]: {
+    width: `calc(${theme.spacing(8)} + 1px)`,
+  },
+});
+
+const DrawerHeader = styled('div')(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'flex-end',
+  padding: theme.spacing(0, 1),
+  ...theme.mixins.toolbar,
+}));
+
+const StyledAppBar = styled(MuiAppBar, {
+  shouldForwardProp: (prop) => prop !== 'open',
+})(({ theme, open }) => ({
+  zIndex: theme.zIndex.drawer + 1,
+  transition: theme.transitions.create(['width', 'margin'], {
+    easing: theme.transitions.easing.sharp,
+    duration: theme.transitions.duration.leavingScreen,
+  }),
+  ...(open && {
+    marginLeft: drawerWidth,
+    width: `calc(100% - ${drawerWidth}px)`,
+    transition: theme.transitions.create(['width', 'margin'], {
+      easing: theme.transitions.easing.sharp,
+      duration: theme.transitions.duration.enteringScreen,
+    }),
+  }),
+}));
+
+const StyledDrawer = styled(MuiDrawer, { 
+  shouldForwardProp: (prop) => prop !== 'open' 
+})(({ theme, open }) => ({
+  width: drawerWidth,
+  flexShrink: 0,
+  whiteSpace: 'nowrap',
+  boxSizing: 'border-box',
+  ...(open && {
+    ...openedMixin(theme),
+    '& .MuiDrawer-paper': openedMixin(theme),
+  }),
+  ...(!open && {
+    ...closedMixin(theme),
+    '& .MuiDrawer-paper': closedMixin(theme),
+  }),
+}));
+
+// Error Boundary Component
+class ErrorBoundary extends React.Component {
+  state = { hasError: false, error: null };
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'grey.50' }}>
+          <Paper elevation={6} sx={{ p: 3, maxWidth: 400, width: '100%', borderRadius: 2 }}>
+            <Typography variant="h6" color="error" gutterBottom>
+              Something went wrong
+            </Typography>
+            <Typography variant="body2" color="text.secondary" gutterBottom>
+              {this.state.error?.message || 'Unknown error'}
+            </Typography>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={() => window.location.reload()}
+              sx={{ mt: 2 }}
+            >
+              Reload Page
+            </Button>
+          </Paper>
+        </Box>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+const theme = createTheme({
+  palette: {
+    primary: { main: '#1a73e8' },
+    secondary: { main: '#d32f2f' },
+    background: { default: '#f5f5f5' },
+  },
+  typography: {
+    h6: { fontWeight: 600 },
+    body2: { fontSize: '0.875rem' },
+  },
+});
+
 export default function MainScreen({ onLogout }) {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [profileOpen, setProfileOpen] = useState(false);
+  const [profileAnchorEl, setProfileAnchorEl] = useState(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [currentStudent, setCurrentStudent] = useState(null);
   const [filterType, setFilterType] = useState('all');
-  const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [filterAnchorEl, setFilterAnchorEl] = useState(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(true);
   const [activeMenuItem, setActiveMenuItem] = useState('Academic');
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage] = useState(10);
 
-  const profileRef = useRef(null);
-  const filterRef = useRef(null);
   const LOCAL_KEY = 'localStudents';
 
-  // Sidebar menu items with icons
   const menuItems = [
-    { name: 'Home', icon: Home, path: '/home' },
-    { name: 'Finance', icon: DollarSign, path: '/finance' },
-    { name: 'Travel', icon: Plane, path: '/travel' },
-    { name: 'Academic', icon: GraduationCap, path: '/academic' },
+    { name: 'Home', icon: Home },
+    { name: 'Finance', icon: DollarSign },
+    { name: 'Travel', icon: Plane },
+    { name: 'Academic', icon: GraduationCap },
   ];
 
   const getLocalStudents = () => {
     try {
-      return JSON.parse(localStorage.getItem(LOCAL_KEY)) || [];
+      const localData = JSON.parse(localStorage.getItem(LOCAL_KEY)) || [];
+      console.log('MainScreen: Fetched local students', localData);
+      return localData;
     } catch {
+      console.error('MainScreen: Error parsing local students');
       return [];
     }
   };
@@ -44,21 +167,35 @@ export default function MainScreen({ onLogout }) {
     const localStudents = getLocalStudents();
     localStudents.unshift(student);
     localStorage.setItem(LOCAL_KEY, JSON.stringify(localStudents));
+    console.log('MainScreen: Saved local student', student);
+  };
+
+  const removeLocalStudent = (id) => {
+    const localStudents = getLocalStudents();
+    const updatedStudents = localStudents.filter((s) => s.id !== id);
+    localStorage.setItem(LOCAL_KEY, JSON.stringify(updatedStudents));
+    console.log('MainScreen: Removed local student with id', id);
   };
 
   useEffect(() => {
     const fetchStudents = async () => {
       setLoading(true);
       try {
+        console.log('MainScreen: Fetching students from API');
         const response = await fetch('https://687b2e57b4bc7cfbda84e292.mockapi.io/users');
         if (!response.ok) throw new Error('Failed to fetch students');
         const data = await response.json();
         const localStudents = getLocalStudents();
         const localIds = new Set(localStudents.map((s) => s.id || s.mail));
         const filteredApi = data.filter((s) => !localIds.has(s.id || s.mail));
-        setStudents([...localStudents, ...filteredApi]);
+        const allStudents = [...localStudents, ...filteredApi];
+        const uniqueStudents = Array.from(
+          new Map(allStudents.map(student => [student.id ? `${student.id}-${student.mail}` : student.mail, student])).values()
+        );
+        setStudents(uniqueStudents);
+        console.log('MainScreen: Students set', uniqueStudents.map(s => ({ id: s.id, firstname: s.firstname, mail: s.mail })));
       } catch (error) {
-        console.error('Error fetching students:', error);
+        console.error('MainScreen: Error fetching students:', error);
       } finally {
         setLoading(false);
       }
@@ -66,38 +203,42 @@ export default function MainScreen({ onLogout }) {
     fetchStudents();
   }, []);
 
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (profileRef.current && !profileRef.current.contains(event.target)) {
-        setProfileOpen(false);
-      }
-      if (filterRef.current && !filterRef.current.contains(event.target)) {
-        setFilterDropdownOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  const filteredStudents = students.filter((s) => {
+    const term = searchTerm.toLowerCase();
+    if (!term) return true;
+    if (filterType === 'all' || filterType === 'firstname') {
+      const value = String(s.firstname || '').toLowerCase();
+      return value.startsWith(term);
+    }
+    const value = String(s[filterType] || '').toLowerCase();
+    return value.includes(term);
+  });
+
+  const sortStudents = (studentsToSort) => {
+    return [...studentsToSort].sort((a, b) => {
+      const valueA = String(a.firstname || '').toLowerCase();
+      const valueB = String(b.firstname || '').toLowerCase();
+      return valueA.localeCompare(valueB, undefined, { sensitivity: 'base' });
+    });
+  };
+
+  const sortedStudents = searchTerm ? sortStudents(filteredStudents) : filteredStudents;
 
   const handleLogout = () => {
+    console.log('MainScreen: Logging out');
     sessionStorage.removeItem('isLoggedIn');
     onLogout();
   };
 
-  const filteredStudents = students.filter((s) => {
-    const term = searchTerm.toLowerCase();
-    if (!term) return true;
-    if (filterType === 'all') {
-      return [s.firstname, s.lastname, s.mail, s.role, s.phone, String(s.age)]
-        .join(' ')
-        .toLowerCase()
-        .includes(term);
-    }
-    return String(s[filterType] || '').toLowerCase().includes(term);
-  });
+  const handleSearchChange = (e) => {
+    const newTerm = e.target.value;
+    setSearchTerm(newTerm);
+    setCurrentPage(1);
+  };
 
   const handleAddStudent = async (newStudent) => {
     try {
+      console.log('MainScreen: Adding student', newStudent);
       const response = await fetch('https://687b2e57b4bc7cfbda84e292.mockapi.io/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -106,13 +247,20 @@ export default function MainScreen({ onLogout }) {
       if (!response.ok) throw new Error('Failed to add student');
       const addedStudent = await response.json();
       saveLocalStudent(addedStudent);
-      setStudents((prev) => [addedStudent, ...prev]);
+      setStudents((prev) => {
+        const updated = [addedStudent, ...prev];
+        return Array.from(new Map(updated.map(student => [student.id ? `${student.id}-${student.mail}` : student.mail, student])).values());
+      });
+      setCurrentPage(1);
+      setSearchTerm('');
+      console.log('MainScreen: Student added successfully', addedStudent);
     } catch (error) {
-      console.error('Error adding student:', error);
+      console.error('MainScreen: Error adding student:', error);
     }
   };
 
   const handleEditStudent = (student) => {
+    console.log('MainScreen: Editing student', student);
     setCurrentStudent({ ...student });
     setEditModalOpen(true);
   };
@@ -120,19 +268,38 @@ export default function MainScreen({ onLogout }) {
   const handleDeleteStudent = async (id) => {
     if (!window.confirm('Delete this student?')) return;
     try {
+      console.log('MainScreen: Deleting student with id', id);
       const response = await fetch(`https://687b2e57b4bc7cfbda84e292.mockapi.io/users/${id}`, {
         method: 'DELETE',
       });
-      if (!response.ok) throw new Error('Delete failed');
-      setStudents((prev) => prev.filter((s) => s.id !== id));
+      if (!response.ok) {
+        if (response.status === 404) {
+          console.warn('MainScreen: Student with id', id, 'not found on server, removing from local state');
+          setStudents((prev) => {
+            const updated = prev.filter((s) => s.id !== id);
+            return Array.from(new Map(updated.map(student => [student.id ? `${student.id}-${student.mail}` : student.mail, student])).values());
+          });
+          removeLocalStudent(id);
+        } else {
+          throw new Error('Delete failed');
+        }
+      } else {
+        setStudents((prev) => {
+          const updated = prev.filter((s) => s.id !== id);
+          return Array.from(new Map(updated.map(student => [student.id ? `${student.id}-${student.mail}` : student.mail, student])).values());
+        });
+        removeLocalStudent(id);
+        console.log('MainScreen: Student deleted successfully', id);
+      }
     } catch (error) {
-      console.error('Error deleting student:', error);
+      console.error('MainScreen: Error deleting student:', error);
     }
   };
 
   const handleUpdateStudent = async (e) => {
     e.preventDefault();
     try {
+      console.log('MainScreen: Updating student', currentStudent);
       const response = await fetch(
         `https://687b2e57b4bc7cfbda84e292.mockapi.io/users/${currentStudent.id}`,
         {
@@ -143,13 +310,15 @@ export default function MainScreen({ onLogout }) {
       );
       if (!response.ok) throw new Error('Update failed');
       const updatedStudent = await response.json();
-      setStudents((prev) =>
-        prev.map((s) => (s.id === updatedStudent.id ? updatedStudent : s))
-      );
+      setStudents((prev) => {
+        const updated = prev.map((s) => (s.id === updatedStudent.id ? updatedStudent : s));
+        return Array.from(new Map(updated.map(student => [student.id ? `${student.id}-${student.mail}` : student.mail, student])).values());
+      });
       setEditModalOpen(false);
       setCurrentStudent(null);
+      console.log('MainScreen: Student updated successfully', updatedStudent);
     } catch (error) {
-      console.error('Error updating student:', error);
+      console.error('MainScreen: Error updating student:', error);
     }
   };
 
@@ -167,350 +336,349 @@ export default function MainScreen({ onLogout }) {
     { key: 'role', label: 'Role' },
   ];
 
-  const sidebarWidth = sidebarCollapsed ? 'w-16' : 'w-64';
-
-  // Pagination Logic
   const indexOfLastRow = currentPage * rowsPerPage;
   const indexOfFirstRow = indexOfLastRow - rowsPerPage;
-  const currentRows = filteredStudents.slice(indexOfFirstRow, indexOfLastRow);
-  const totalPages = Math.ceil(filteredStudents.length / rowsPerPage);
+  const currentRows = sortedStudents.slice(indexOfFirstRow, indexOfLastRow);
+  const totalPages = Math.ceil(sortedStudents.length / rowsPerPage);
 
-  const handleNextPage = () => {
-    if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+  const handlePageChange = (event, page) => {
+    setCurrentPage(page);
   };
 
-  const handlePrevPage = () => {
-    if (currentPage > 1) setCurrentPage(currentPage - 1);
-  };
+  const handleDrawerOpen = () => setIsDrawerOpen(true);
+  const handleDrawerClose = () => setIsDrawerOpen(false);
+
+  console.log('MainScreen: Rendering with students', students.map(s => ({ id: s.id, firstname: s.firstname, mail: s.mail })), 'sortedStudents', sortedStudents.map(s => ({ id: s.id, firstname: s.firstname, mail: s.mail })), 'searchTerm', searchTerm);
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      {/* Dark Sidebar */}
-      <aside className={`${sidebarWidth} bg-gray-900 text-white flex-shrink-0 transition-all duration-300 ease-in-out relative`}>
-        {/* Sidebar Header */}
-        <div className="h-16 flex items-center justify-between px-4 border-b border-gray-700">
-          {!sidebarCollapsed && (
-            <div className="flex items-center space-x-3">
-              <span className="font-semibold text-lg">MyApp</span>
-            </div>
-          )}
-          <button
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
-            aria-label="Toggle Sidebar"
-          >
-            {sidebarCollapsed ? <Menu size={20} /> : <ChevronLeft size={20} />}
-          </button>
-        </div>
+    <ThemeProvider theme={theme}>
+      <ErrorBoundary>
+        <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+          <CssBaseline />
+          
+          <StyledAppBar position="fixed" open={isDrawerOpen} elevation={1} sx={{ bgcolor: 'white', color: 'text.primary' }}>
+            <Toolbar>
+              <IconButton
+                color="inherit"
+                aria-label="open drawer"
+                onClick={handleDrawerOpen}
+                edge="start"
+                sx={{
+                  marginRight: 5,
+                  ...(isDrawerOpen && { display: 'none' }),
+                }}
+              >
+                <Menu />
+              </IconButton>
+              <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
+                Students Dashboard
+              </Typography>
+              <Typography variant="subtitle1" color="text.secondary" sx={{ mx: 2, display: { xs: 'none', sm: 'block' } }}>
+                {activeMenuItem}
+              </Typography>
+              <IconButton onClick={(e) => setProfileAnchorEl(e.currentTarget)}>
+                <User />
+              </IconButton>
+              <MuiMenu
+                anchorEl={profileAnchorEl}
+                open={Boolean(profileAnchorEl)}
+                onClose={() => setProfileAnchorEl(null)}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+              >
+                <MenuItem onClick={handleLogout} sx={{ color: 'error.main' }}>
+                  <LogOut size={16} style={{ marginRight: 8 }} /> Logout
+                </MenuItem>
+              </MuiMenu>
+            </Toolbar>
+          </StyledAppBar>
 
-        {/* Navigation Menu */}
-        <nav className="flex-1 p-4">
-          <ul className="space-y-2">
-            {menuItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = activeMenuItem === item.name;
+          <StyledDrawer variant="permanent" open={isDrawerOpen}>
+            <DrawerHeader sx={{ bgcolor: 'grey.900', justifyContent: 'space-between', px: 2 }}>
+              {isDrawerOpen && (
+                <Typography variant="h6" sx={{ fontWeight: 700, color: 'white' }}>
+                  MyApp
+                </Typography>
+              )}
+              <IconButton onClick={handleDrawerClose} sx={{ color: 'white' }}>
+                <ChevronLeft />
+              </IconButton>
+            </DrawerHeader>
 
-              return (
-                <li key={item.name}>
-                  <button
-                    onClick={() => setActiveMenuItem(item.name)}
-                    className={`w-full flex items-center space-x-2 px-1 py-2 rounded-lg transition-colors duration-200 text-left
-                      ${isActive
-                        ? 'bg-blue-600 text-white shadow-lg'
-                        : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-                      }`}
-                    title={sidebarCollapsed ? item.name : ''}
-                  >
-                    <Icon size={20} className="flex-shrink-0" />
-                    {!sidebarCollapsed && (
-                      <span className="font-medium">{item.name}</span>
-                    )}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
-
-        {/* Sidebar Footer */}
-        <div className="p-4 border-t border-gray-700">
-          <div className={`flex items-center space-x-3 ${sidebarCollapsed ? 'justify-center' : ''}`}>
-            <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center">
-              <User size={16} />
-            </div>
-            {!sidebarCollapsed && (
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate">John Doe</p>
-                <p className="text-xs text-gray-400 truncate">john@example.com</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Header */}
-        <header className="bg-white shadow-sm border-b flex justify-between items-center px-6 h-16">
-          <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-bold text-gray-800">Students Dashboard</h1>
-            <span className="px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-full">
-              {activeMenuItem}
-            </span>
-          </div>
-          <div className="relative" ref={profileRef}>
-            <button
-              onClick={() => setProfileOpen(!profileOpen)}
-              className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-            >
-              <User size={20} className="text-gray-600" />
-            </button>
-            {profileOpen && (
-              <div className="absolute right-0 mt-2 w-44 bg-white shadow-lg border rounded-xl py-2 z-50">
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center w-full gap-2 px-4 py-2 hover:bg-red-50 text-red-600 transition-colors"
-                >
-                  <LogOut size={16} /> Logout
-                </button>
-              </div>
-            )}
-          </div>
-        </header>
-
-        {/* Toolbar */}
-        <div className="px-6 py-4 bg-white border-b shadow-sm">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="relative flex items-center md:w-auto w-full">
-              <div className="relative md:w-80 w-full">
-                <Search className="absolute top-3 left-3 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder={`Search students${filterType !== 'all' ? ` by ${filterType}` : ''}...`}
-                  className="w-full pl-10 pr-10 py-2 text-sm border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                />
-                {searchTerm && (
-                  <button
-                    onClick={() => setSearchTerm('')}
-                    className="absolute top-2.5 right-3 text-gray-400 hover:text-gray-600"
-                  >
-                    <X size={18} />
-                  </button>
-                )}
-              </div>
-              <div className="relative ml-2" ref={filterRef}>
-                <button
-                  onClick={() => setFilterDropdownOpen(!filterDropdownOpen)}
-                  className="flex items-center gap-2 bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 px-3 py-2 rounded-lg transition-colors shadow-sm"
-                >
-                  <Filter size={16} />
-                  {!sidebarCollapsed && <span className="hidden sm:inline">Filter</span>}
-                </button>
-                {filterDropdownOpen && (
-                  <div className="absolute top-full mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
-                    {filterOptions.map(({ key, label }) => (
-                      <button
-                        key={key}
-                        onClick={() => {
-                          setFilterType(key);
-                          setFilterDropdownOpen(false);
+            <Box sx={{ bgcolor: 'grey.900', color: 'white', flexGrow: 1, position: 'relative' }}>
+              <List sx={{ p: 1 }}>
+                {menuItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = activeMenuItem === item.name;
+                  return (
+                    <ListItem key={item.name} disablePadding sx={{ display: 'block' }}>
+                      <ListItemButton
+                        onClick={() => setActiveMenuItem(item.name)}
+                        sx={{
+                          minHeight: 48,
+                          justifyContent: isDrawerOpen ? 'initial' : 'center',
+                          px: 2.5,
+                          borderRadius: 2,
+                          bgcolor: isActive ? 'primary.main' : 'transparent',
+                          '&:hover': { bgcolor: isActive ? 'primary.dark' : 'grey.800' },
+                          mb: 0.5,
                         }}
-                        className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 transition-colors
-                          ${filterType === key ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-700'}
-                        `}
                       >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <button
-              onClick={() => setAddModalOpen(true)}
-              className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 shadow-sm text-sm font-medium transition-colors"
-            >
-              <Plus size={16} />
-              Add Student
-            </button>
-          </div>
-        </div>
-
-        {/* Table */}
-        <main className="flex-1 p-6 overflow-x-auto">
-          <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-            <table className="min-w-full text-sm">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="p-4 text-left">
-                    <input
-                      type="checkbox"
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                  </th>
-                  <th className="p-4 text-left font-semibold text-gray-700">First Name</th>
-                  <th className="p-4 text-left font-semibold text-gray-700">Last Name</th>
-                  <th className="p-4 text-left font-semibold text-gray-700">Age</th>
-                  <th className="p-4 text-left font-semibold text-gray-700">Phone</th>
-                  <th className="p-4 text-left font-semibold text-gray-700">Email</th>
-                  <th className="p-4 text-left font-semibold text-gray-700">Role</th>
-                  <th className="p-4 text-left font-semibold text-gray-700">Date</th>
-                  <th className="p-4 text-left font-semibold text-gray-700">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan="9" className="text-center p-8">
-                      <div className="flex items-center justify-center space-x-2">
-                        <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                        <span className="text-gray-500">Loading students...</span>
-                      </div>
-                    </td>
-                  </tr>
-                ) : currentRows.length === 0 ? (
-                  <tr>
-                    <td colSpan="9" className="text-center p-8 text-gray-500">
-                      No students found matching your criteria.
-                    </td>
-                  </tr>
-                ) : (
-                  currentRows.map((student, index) => (
-                    <tr
-                      key={student.id}
-                      className={`border-t border-gray-100 hover:bg-blue-50/50 transition-colors
-                        ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}
-                      `}
-                    >
-                      <td className="p-4">
-                        <input
-                          type="checkbox"
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        <ListItemIcon
+                          sx={{
+                            minWidth: 0,
+                            mr: isDrawerOpen ? 3 : 'auto',
+                            justifyContent: 'center',
+                            color: 'inherit',
+                          }}
+                        >
+                          <Icon />
+                        </ListItemIcon>
+                        <ListItemText 
+                          primary={item.name} 
+                          sx={{ opacity: isDrawerOpen ? 1 : 0, color: 'white' }} 
                         />
-                      </td>
-                      <td className="p-4 text-gray-900 font-medium">{student.firstname}</td>
-                      <td className="p-4 text-gray-900">{student.lastname}</td>
-                      <td className="p-4 text-gray-700">{student.age}</td>
-                      <td className="p-4 text-gray-700">{student.phone}</td>
-                      <td className="p-4 text-gray-700">{student.mail}</td>
-                      <td className="p-4">
-                        <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
-                          {student.role}
-                        </span>
-                      </td>
-                      <td className="p-4 text-gray-700">
-                        {student.date ? new Date(student.date).toLocaleDateString() : ''}
-                      </td>
-                      <td className="p-4">
-                        <div className="flex items-center space-x-2">
-                          <button
-                            onClick={() => handleEditStudent(student)}
-                            title="Edit Student"
-                            className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
-                          >
-                            <Edit3 size={16} />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteStudent(student.id)}
-                            title="Delete Student"
-                            className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                      </ListItemButton>
+                    </ListItem>
+                  );
+                })}
+              </List>
+              
+              <Box sx={{ 
+                position: 'absolute', 
+                bottom: 0, 
+                left: 0, 
+                width: '100%', 
+                p: 2, 
+                borderTop: 1, 
+                borderColor: 'grey.800' 
+              }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, overflow: 'hidden' }}>
+                  <Avatar sx={{ width: 40, height: 40, bgcolor: 'grey.600', flexShrink: 0 }}>
+                    <User />
+                  </Avatar>
+                  {isDrawerOpen && (
+                    <Box sx={{ minWidth: 0 }}>
+                      <Typography variant="body2" color="white" fontWeight={500} noWrap>
+                        John Doe
+                      </Typography>
+                      <Typography variant="caption" color="grey.400" noWrap>
+                        john@example.com
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
+              </Box>
+            </Box>
+          </StyledDrawer>
 
-          {/* Pagination Controls */}
-          {!loading && filteredStudents.length > 0 && (
-            <div className="flex justify-between items-center px-6 py-4 bg-white border-t border-gray-200">
-              <button
-                onClick={handlePrevPage}
-                disabled={currentPage === 1}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed transition-colors"
-              >
-                Previous
-              </button>
-              <span className="text-sm text-gray-600">
-                Page {currentPage} of {totalPages}
-              </span>
-              <button
-                onClick={handleNextPage}
-                disabled={currentPage === totalPages}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed transition-colors"
-              >
-                Next
-              </button>
-            </div>
-          )}
-        </main>
-      </div>
-
-      {/* Edit Modal */}
-      {editModalOpen && currentStudent && (
-        <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold text-gray-900">Edit Student</h3>
-                <button
-                  onClick={() => setEditModalOpen(false)}
-                  className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+          <Box component="main" sx={{ flexGrow: 1, bgcolor: 'background.default' }}>
+            <DrawerHeader />
+            
+            <Container maxWidth={false} sx={{ p: 3 }}>
+              <Box sx={{ 
+                mb: 3, 
+                display: 'flex', 
+                flexDirection: { xs: 'column', md: 'row' }, 
+                gap: 2, 
+                alignItems: 'center' 
+              }}>
+                <TextField
+                  fullWidth
+                  variant="outlined"
+                  value={searchTerm}
+                  onChange={handleSearchChange}
+                  placeholder={`Search students${filterType !== 'all' ? ` by ${filterType}` : ''}...`}
+                  InputProps={{
+                    startAdornment: <InputAdornment position="start"><Search size={20} /></InputAdornment>,
+                    endAdornment: searchTerm && (
+                      <IconButton onClick={() => setSearchTerm('')} edge="end">
+                        <X size={20} />
+                      </IconButton>
+                    ),
+                  }}
+                  sx={{ maxWidth: { md: 400 } }}
+                />
+                <Button 
+                  variant="contained" 
+                  color="primary" 
+                  startIcon={<Plus />} 
+                  onClick={() => setAddModalOpen(true)}
+                  sx={{ minWidth: 150 }}
                 >
-                  <X size={20} className="text-gray-500" />
-                </button>
-              </div>
-              <form onSubmit={handleUpdateStudent} className="space-y-4">
-                {['firstname', 'lastname', 'age', 'phone', 'mail', 'role'].map((field) => (
-                  <div key={field}>
-                    <label className="block text-sm font-medium text-gray-700 mb-1 capitalize">
-                      {field === 'mail' ? 'Email' : field.replace(/([A-Z])/g, ' $1')}
-                    </label>
-                    <input
+                  Add Student
+                </Button>
+                <IconButton onClick={(e) => setFilterAnchorEl(e.currentTarget)}>
+                  <Filter />
+                </IconButton>
+                <MuiMenu
+                  anchorEl={filterAnchorEl}
+                  open={Boolean(filterAnchorEl)}
+                  onClose={() => setFilterAnchorEl(null)}
+                  anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                  transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                >
+                  {filterOptions.map(({ key, label }) => (
+                    <MenuItem 
+                      key={key} 
+                      onClick={() => { setFilterType(key); setFilterAnchorEl(null); }} 
+                      selected={filterType === key}
+                    >
+                      {label}
+                    </MenuItem>
+                  ))}
+                </MuiMenu>
+              </Box>
+
+              <Paper elevation={2} sx={{ mb: 2 }}>
+                <TableContainer>
+                  <Table>
+                    <TableHead sx={{ bgcolor: 'grey.100' }}>
+                      <TableRow>
+                        <TableCell padding="checkbox">
+                          <Checkbox color="primary" />
+                        </TableCell>
+                        <TableCell>First Name</TableCell>
+                        <TableCell>Last Name</TableCell>
+                        <TableCell>Age</TableCell>
+                        <TableCell>Phone</TableCell>
+                        <TableCell>Email</TableCell>
+                        <TableCell>Role</TableCell>
+                        <TableCell>Date</TableCell>
+                        <TableCell align="center">Actions</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {loading ? (
+                        <TableRow>
+                          <TableCell colSpan={9} align="center" sx={{ py: 5 }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 2 }}>
+                              <CircularProgress size={20} />
+                              <Typography variant="body2">Loading students...</Typography>
+                            </Box>
+                          </TableCell>
+                        </TableRow>
+                      ) : currentRows.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={9} align="center" sx={{ py: 5 }}>
+                            <Typography color="text.secondary">
+                              No students found matching your criteria.
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        currentRows.map((student, index) => (
+                          <TableRow
+                            key={`${student.id || student.mail}-${index}`}
+                            hover
+                            sx={{ '&:nth-of-type(odd)': { bgcolor: 'grey.50' } }}
+                          >
+                            <TableCell padding="checkbox">
+                              <Checkbox color="primary" />
+                            </TableCell>
+                            <TableCell>{student.firstname || 'N/A'}</TableCell>
+                            <TableCell>{student.lastname || 'N/A'}</TableCell>
+                            <TableCell>{student.age || 'N/A'}</TableCell>
+                            <TableCell>{student.phone || 'N/A'}</TableCell>
+                            <TableCell>{student.mail || 'N/A'}</TableCell>
+                            <TableCell>
+                              <Typography 
+                                component="span" 
+                                variant="body2" 
+                                sx={{ 
+                                  bgcolor: 'green.100', 
+                                  color: 'green.800', 
+                                  px: 1, 
+                                  py: 0.5, 
+                                  borderRadius: 1,
+                                  fontSize: '0.75rem'
+                                }}
+                              >
+                                {student.role || 'N/A'}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              {student.date ? new Date(student.date).toLocaleDateString() : 'N/A'}
+                            </TableCell>
+                            <TableCell align="center">
+                              <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
+                                <IconButton 
+                                  onClick={() => handleEditStudent(student)} 
+                                  color="primary" 
+                                  size="small"
+                                >
+                                  <Edit3 size={16} />
+                                </IconButton>
+                                <IconButton 
+                                  onClick={() => handleDeleteStudent(student.id)} 
+                                  color="error" 
+                                  size="small"
+                                >
+                                  <Trash2 size={16} />
+                                </IconButton>
+                              </Box>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Paper>
+
+              {!loading && sortedStudents.length > 0 && (
+                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+                  <Pagination 
+                    count={totalPages} 
+                    page={currentPage} 
+                    onChange={handlePageChange} 
+                    color="primary" 
+                  />
+                </Box>
+              )}
+            </Container>
+
+            <Dialog open={editModalOpen} onClose={() => setEditModalOpen(false)} maxWidth="sm" fullWidth>
+              <DialogTitle>Edit Student</DialogTitle>
+              <DialogContent>
+                <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {['firstname', 'lastname', 'age', 'phone', 'mail', 'role'].map((field) => (
+                    <TextField
+                      key={field}
                       name={field}
+                      label={field === 'mail' ? 'Email' : field.charAt(0).toUpperCase() + field.slice(1)}
                       type={field === 'age' ? 'number' : field === 'mail' ? 'email' : 'text'}
-                      value={currentStudent[field] || ''}
+                      value={currentStudent?.[field] || ''}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                      fullWidth
+                      variant="outlined"
                     />
-                  </div>
-                ))}
-                <div className="flex justify-end space-x-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => setEditModalOpen(false)}
-                    className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors font-medium"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-                  >
-                    Save Changes
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
+                  ))}
+                </Box>
+              </DialogContent>
+              <DialogActions>
+                <Button onClick={() => setEditModalOpen(false)} color="inherit">
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleUpdateStudent} 
+                  variant="contained" 
+                  color="primary"
+                >
+                  Save Changes
+                </Button>
+              </DialogActions>
+            </Dialog>
 
-      {/* Add Modal */}
-      <AddStudentModal
-        isOpen={addModalOpen}
-        onClose={() => setAddModalOpen(false)}
-        onAddStudent={handleAddStudent}
-      />
-    </div>
+            <AddStudentModal
+              isOpen={addModalOpen}
+              onClose={() => setAddModalOpen(false)}
+              onAddStudent={handleAddStudent}
+            />
+          </Box>
+        </Box>
+      </ErrorBoundary>
+    </ThemeProvider>
   );
 }
