@@ -1,147 +1,229 @@
 import React, { useState } from 'react';
-import { User, Mail, Lock, Eye, EyeOff, Bell, Settings, BarChart3, LogOut } from 'lucide-react';
+import {
+  User, Mail, Lock, Settings, BarChart3, LogOut, Menu, ChevronLeft,
+} from 'lucide-react';
 import PropTypes from 'prop-types';
+import {
+  Box, Typography, IconButton, Drawer, List, ListItem, ListItemButton,
+  ListItemIcon, ListItemText, AppBar, Toolbar, Container, styled,
+  createTheme, ThemeProvider, CssBaseline,
+} from '@mui/material';
+
+// Styled components
+const drawerWidth = 240;
+
+const StyledAppBar = styled(AppBar, {
+  shouldForwardProp: (prop) => prop !== 'open',
+})(({ theme, open }) => ({
+  zIndex: theme.zIndex.drawer + 1,
+  transition: theme.transitions.create(['width', 'margin'], {
+    easing: theme.transitions.easing.sharp,
+    duration: theme.transitions.duration.leavingScreen,
+  }),
+  ...(open && {
+    marginLeft: drawerWidth,
+    width: `calc(100% - ${drawerWidth}px)`,
+    transition: theme.transitions.create(['width', 'margin'], {
+      easing: theme.transitions.easing.sharp,
+      duration: theme.transitions.duration.enteringScreen,
+    }),
+  }),
+}));
+
+const StyledDrawer = styled(Drawer, { shouldForwardProp: (prop) => prop !== 'open' })(({ theme, open }) => ({
+  width: drawerWidth,
+  flexShrink: 0,
+  whiteSpace: 'nowrap',
+  boxSizing: 'border-box',
+  ...(open && {
+    width: drawerWidth,
+    transition: theme.transitions.create('width', {
+      easing: theme.transitions.easing.sharp,
+      duration: theme.transitions.duration.enteringScreen,
+    }),
+  }),
+  ...(!open && {
+    transition: theme.transitions.create('width', {
+      easing: theme.transitions.easing.sharp,
+      duration: theme.transitions.duration.leavingScreen,
+    }),
+    width: theme.spacing(7),
+    [theme.breakpoints.up('sm')]: {
+      width: theme.spacing(8),
+    },
+  }),
+}));
+
+const DrawerHeader = styled('div')(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'flex-end',
+  padding: theme.spacing(0, 1),
+  ...theme.mixins.toolbar,
+}));
+
+const theme = createTheme({
+  palette: {
+    primary: { main: '#1a73e8' },
+    background: { default: '#f5f5f5' },
+  },
+  typography: {
+    h6: { fontWeight: 600 },
+  },
+});
 
 function MainScreen({ onLogout, user = {} }) {
-    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-    const toggleSidebar = () => {
-        setIsSidebarOpen(!isSidebarOpen);
-    };
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
 
-    // Fallback for user data
-    const displayName = user.name || 'Guest';
-    const lastLogin = user.lastLogin ? new Date(user.lastLogin).toLocaleString() : 'Not available';
+  const displayName = user.name || 'Guest';
+  const lastLogin = user.lastLogin
+    ? new Date(user.lastLogin).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })
+    : new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
 
-    return (
-        <div className="flex min-h-screen">
-            {/* Sidebar */}
-            <div
-                className={`fixed inset-0 z-40 transition-transform transform ${
-                    isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-                } lg:translate-x-0`}
+  const menuItems = [
+    { name: 'Profile', icon: User },
+    { name: 'Messages', icon: Mail },
+    { name: 'Security', icon: Lock },
+    { name: 'Settings', icon: Settings },
+    { name: 'Analytics', icon: BarChart3 },
+  ];
+
+  return (
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+        {/* AppBar */}
+        <StyledAppBar position="fixed" open={isSidebarOpen} color="transparent" elevation={0}>
+          <Toolbar>
+            <IconButton
+              color="inherit"
+              aria-label="open drawer"
+              onClick={toggleSidebar}
+              edge="start"
+              sx={{ mr: 2, display: { lg: 'none' } }}
             >
-                <div className="flex flex-col h-full bg-white shadow-lg w-64 p-4">
-                    {/* Close button for mobile */}
-                    <div className="flex justify-end lg:hidden">
-                        <button
-                            onClick={toggleSidebar}
-                            className="p-2 text-gray-500 rounded-md hover:bg-gray-100 focus:outline-none"
-                            aria-label="Close sidebar"
-                        >
-                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M6 18L18 6M6 6l12 12"
-                                />
-                            </svg>
-                        </button>
-                    </div>
+              <Menu />
+            </IconButton>
+            <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
+              Dashboard
+            </Typography>
+          </Toolbar>
+        </StyledAppBar>
 
-                    {/* Logo */}
-                    <div className="flex items-center justify-center h-16">
-                        <h1 className="text-2xl font-bold text-gray-900">MyApp</h1>
-                    </div>
+        {/* Drawer */}
+        <StyledDrawer
+          variant="temporary"
+          open={isSidebarOpen}
+          onClose={toggleSidebar}
+          sx={{
+            display: { xs: 'block', lg: 'none' },
+            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
+          }}
+        >
+          <DrawerHeader>
+            <IconButton onClick={toggleSidebar}>
+              <ChevronLeft />
+            </IconButton>
+          </DrawerHeader>
+          <List>
+            {menuItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <ListItem key={item.name} disablePadding>
+                  <ListItemButton href="#" sx={{ '&:hover': { bgcolor: 'grey.100' } }}>
+                    <ListItemIcon>
+                      <Icon size={20} />
+                    </ListItemIcon>
+                    <ListItemText primary={item.name} />
+                  </ListItemButton>
+                </ListItem>
+              );
+            })}
+            <ListItem disablePadding>
+              <ListItemButton onClick={onLogout} sx={{ '&:hover': { bgcolor: 'error.light' } }}>
+                <ListItemIcon>
+                  <LogOut size={20} />
+                </ListItemIcon>
+                <ListItemText primary="Logout" sx={{ color: 'error.main' }} />
+              </ListItemButton>
+            </ListItem>
+          </List>
+        </StyledDrawer>
 
-                    {/* Navigation */}
-                    <nav className="flex-1">
-                        <ul className="space-y-2">
-                            <li>
-                                <a href="#" className="flex items-center p-2 text-gray-900 rounded-lg hover:bg-gray-100">
-                                    <User className="w-5 h-5 mr-3" />
-                                    Profile
-                                </a>
-                            </li>
-                            <li>
-                                <a href="#" className="flex items-center p-2 text-gray-900 rounded-lg hover:bg-gray-100">
-                                    <Mail className="w-5 h-5 mr-3" />
-                                    Messages
-                                </a>
-                            </li>
-                            <li>
-                                <a href="#" className="flex items-center p-2 text-gray-900 rounded-lg hover:bg-gray-100">
-                                    <Lock className="w-5 h-5 mr-3" />
-                                    Security
-                                </a>
-                            </li>
-                            <li>
-                                <a href="#" className="flex items-center p-2 text-gray-900 rounded-lg hover:bg-gray-100">
-                                    <Settings className="w-5 h-5 mr-3" />
-                                    Settings
-                                </a>
-                            </li>
-                            <li>
-                                <a href="#" className="flex items-center p-2 text-gray-900 rounded-lg hover:bg-gray-100">
-                                    <BarChart3 className="w-5 h-5 mr-3" />
-                                    Analytics
-                                </a>
-                            </li>
-                        </ul>
-                    </nav>
+        <StyledDrawer
+          variant="permanent"
+          open={true}
+          sx={{
+            display: { xs: 'none', lg: 'block' },
+            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth, bgcolor: 'white', boxShadow: 2 },
+          }}
+        >
+          <DrawerHeader sx={{ justifyContent: 'center' }}>
+            <Typography variant="h6" sx={{ fontWeight: 700 }}>
+              MyApp
+            </Typography>
+          </DrawerHeader>
+          <List>
+            {menuItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <ListItem key={item.name} disablePadding>
+                  <ListItemButton href="#" sx={{ '&:hover': { bgcolor: 'grey.100' } }}>
+                    <ListItemIcon>
+                      <Icon size={20} />
+                    </ListItemIcon>
+                    <ListItemText primary={item.name} />
+                  </ListItemButton>
+                </ListItem>
+              );
+            })}
+            <ListItem disablePadding>
+              <ListItemButton onClick={onLogout} sx={{ '&:hover': { bgcolor: 'error.light' } }}>
+                <ListItemIcon>
+                  <LogOut size={20} />
+                </ListItemIcon>
+                <ListItemText primary="Logout" sx={{ color: 'error.main' }} />
+              </ListItemButton>
+            </ListItem>
+          </List>
+        </StyledDrawer>
 
-                    {/* Logout */}
-                    <div className="p-2">
-                        <button
-                            onClick={onLogout}
-                            className="flex items-center w-full p-2 text-gray-900 rounded-lg hover:bg-gray-100"
-                            aria-label="Logout"
-                        >
-                            <LogOut className="w-5 h-5 mr-3" />
-                            Logout
-                        </button>
-                    </div>
-                </div>
-            </div>
+        {/* Content Area */}
+        <Box component="main" sx={{ flexGrow: 1, p: 3, ml: { lg: `${drawerWidth}px` } }}>
+          <Toolbar />
+          <Container maxWidth="lg">
+            <Box sx={{ mt: 4 }}>
+              <Typography variant="h4" gutterBottom>
+                Welcome back, {displayName}!
+              </Typography>
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                You last logged in on {lastLogin}
+              </Typography>
+            </Box>
 
-            {/* Content area */}
-            <div className="flex-1 p-4 lg:ml-64">
-                {/* Mobile menu button */}
-                <div className="flex justify-between lg:hidden">
-                    <div>
-                        <h2 className="text-2xl font-bold text-gray-900">Dashboard</h2>
-                    </div>
-                    <div>
-                        <button
-                            onClick={toggleSidebar}
-                            className="p-2 text-gray-500 rounded-md hover:bg-gray-100 focus:outline-none"
-                            aria-label="Open sidebar"
-                        >
-                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M4 6h16M4 12h16m-7 6h7"
-                                />
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-
-                <div className="mt-4">
-                    <h3 className="text-lg font-semibold text-gray-800">Welcome back, {displayName}!</h3>
-                    <p className="mt-1 text-sm text-gray-600">You last logged in on {lastLogin}</p>
-                </div>
-
-                {/* Add your main content here */}
-                <div className="mt-6">
-                    {/* Placeholder for additional content */}
-                    <p className="text-gray-600">Add your dashboard content here.</p>
-                </div>
-            </div>
-        </div>
-    );
+            <Box sx={{ mt: 6 }}>
+              <Typography variant="body1" color="text.secondary">
+                Add your dashboard content here.
+              </Typography>
+            </Box>
+          </Container>
+        </Box>
+      </Box>
+    </ThemeProvider>
+  );
 }
 
 MainScreen.propTypes = {
-    onLogout: PropTypes.func.isRequired,
-    user: PropTypes.shape({
-        name: PropTypes.string,
-        email: PropTypes.string,
-        lastLogin: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-    }),
+  onLogout: PropTypes.func.isRequired,
+  user: PropTypes.shape({
+    name: PropTypes.string,
+    email: PropTypes.string,
+    lastLogin: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  }),
 };
 
 export default MainScreen;

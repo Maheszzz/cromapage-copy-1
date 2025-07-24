@@ -4,13 +4,12 @@ import {
   Home, DollarSign, Plane, GraduationCap, Menu, ChevronLeft
 } from 'lucide-react';
 import AddStudentModal from './AddStudentModal';
-
 import {
   AppBar as MuiAppBar, Toolbar, Typography, Button, Container, Box, CssBaseline,
-  Drawer as MuiDrawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, 
-  IconButton, Menu as MuiMenu, MenuItem, TextField, Table, TableBody, TableCell, 
-  TableHead, TableRow, TableContainer, Paper, Dialog, DialogTitle, DialogContent, 
-  DialogActions, InputAdornment, Checkbox, Pagination, CircularProgress, Avatar, 
+  Drawer as MuiDrawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText,
+  IconButton, Menu as MuiMenu, MenuItem, TextField, Table, TableBody, TableCell,
+  TableHead, TableRow, TableContainer, Paper, Dialog, DialogTitle, DialogContent,
+  DialogActions, InputAdornment, Checkbox, Pagination, CircularProgress, Avatar,
   createTheme, ThemeProvider, styled
 } from '@mui/material';
 
@@ -64,8 +63,8 @@ const StyledAppBar = styled(MuiAppBar, {
   }),
 }));
 
-const StyledDrawer = styled(MuiDrawer, { 
-  shouldForwardProp: (prop) => prop !== 'open' 
+const StyledDrawer = styled(MuiDrawer, {
+  shouldForwardProp: (prop) => prop !== 'open'
 })(({ theme, open }) => ({
   width: drawerWidth,
   flexShrink: 0,
@@ -128,7 +127,7 @@ const theme = createTheme({
   },
 });
 
-export default function MainScreen({ onLogout }) {
+export default function MainScreen({ onLogout, user }) {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -155,7 +154,6 @@ export default function MainScreen({ onLogout }) {
   const getLocalStudents = () => {
     try {
       const localData = JSON.parse(localStorage.getItem(LOCAL_KEY)) || [];
-      console.log('MainScreen: Fetched local students', localData);
       return localData;
     } catch {
       console.error('MainScreen: Error parsing local students');
@@ -167,21 +165,18 @@ export default function MainScreen({ onLogout }) {
     const localStudents = getLocalStudents();
     localStudents.unshift(student);
     localStorage.setItem(LOCAL_KEY, JSON.stringify(localStudents));
-    console.log('MainScreen: Saved local student', student);
   };
 
   const removeLocalStudent = (id) => {
     const localStudents = getLocalStudents();
     const updatedStudents = localStudents.filter((s) => s.id !== id);
     localStorage.setItem(LOCAL_KEY, JSON.stringify(updatedStudents));
-    console.log('MainScreen: Removed local student with id', id);
   };
 
   useEffect(() => {
     const fetchStudents = async () => {
       setLoading(true);
       try {
-        console.log('MainScreen: Fetching students from API');
         const response = await fetch('https://687b2e57b4bc7cfbda84e292.mockapi.io/users');
         if (!response.ok) throw new Error('Failed to fetch students');
         const data = await response.json();
@@ -193,7 +188,6 @@ export default function MainScreen({ onLogout }) {
           new Map(allStudents.map(student => [student.id ? `${student.id}-${student.mail}` : student.mail, student])).values()
         );
         setStudents(uniqueStudents);
-        console.log('MainScreen: Students set', uniqueStudents.map(s => ({ id: s.id, firstname: s.firstname, mail: s.mail })));
       } catch (error) {
         console.error('MainScreen: Error fetching students:', error);
       } finally {
@@ -225,20 +219,19 @@ export default function MainScreen({ onLogout }) {
   const sortedStudents = searchTerm ? sortStudents(filteredStudents) : filteredStudents;
 
   const handleLogout = () => {
-    console.log('MainScreen: Logging out');
-    sessionStorage.removeItem('isLoggedIn');
-    onLogout();
+    if (window.confirm('Are you sure you want to logout?')) {
+      sessionStorage.removeItem('isLoggedIn');
+      onLogout();
+    }
   };
 
   const handleSearchChange = (e) => {
-    const newTerm = e.target.value;
-    setSearchTerm(newTerm);
+    setSearchTerm(e.target.value);
     setCurrentPage(1);
   };
 
   const handleAddStudent = async (newStudent) => {
     try {
-      console.log('MainScreen: Adding student', newStudent);
       const response = await fetch('https://687b2e57b4bc7cfbda84e292.mockapi.io/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -253,28 +246,24 @@ export default function MainScreen({ onLogout }) {
       });
       setCurrentPage(1);
       setSearchTerm('');
-      console.log('MainScreen: Student added successfully', addedStudent);
     } catch (error) {
       console.error('MainScreen: Error adding student:', error);
     }
   };
 
   const handleEditStudent = (student) => {
-    console.log('MainScreen: Editing student', student);
-    setCurrentStudent({ ...student });
+    setCurrentStudent({ ...student, id: student.id || student.mail }); // Ensure id is set
     setEditModalOpen(true);
   };
 
   const handleDeleteStudent = async (id) => {
     if (!window.confirm('Delete this student?')) return;
     try {
-      console.log('MainScreen: Deleting student with id', id);
       const response = await fetch(`https://687b2e57b4bc7cfbda84e292.mockapi.io/users/${id}`, {
         method: 'DELETE',
       });
       if (!response.ok) {
         if (response.status === 404) {
-          console.warn('MainScreen: Student with id', id, 'not found on server, removing from local state');
           setStudents((prev) => {
             const updated = prev.filter((s) => s.id !== id);
             return Array.from(new Map(updated.map(student => [student.id ? `${student.id}-${student.mail}` : student.mail, student])).values());
@@ -289,7 +278,6 @@ export default function MainScreen({ onLogout }) {
           return Array.from(new Map(updated.map(student => [student.id ? `${student.id}-${student.mail}` : student.mail, student])).values());
         });
         removeLocalStudent(id);
-        console.log('MainScreen: Student deleted successfully', id);
       }
     } catch (error) {
       console.error('MainScreen: Error deleting student:', error);
@@ -298,8 +286,8 @@ export default function MainScreen({ onLogout }) {
 
   const handleUpdateStudent = async (e) => {
     e.preventDefault();
+    if (!currentStudent?.id) return;
     try {
-      console.log('MainScreen: Updating student', currentStudent);
       const response = await fetch(
         `https://687b2e57b4bc7cfbda84e292.mockapi.io/users/${currentStudent.id}`,
         {
@@ -316,7 +304,6 @@ export default function MainScreen({ onLogout }) {
       });
       setEditModalOpen(false);
       setCurrentStudent(null);
-      console.log('MainScreen: Student updated successfully', updatedStudent);
     } catch (error) {
       console.error('MainScreen: Error updating student:', error);
     }
@@ -348,14 +335,12 @@ export default function MainScreen({ onLogout }) {
   const handleDrawerOpen = () => setIsDrawerOpen(true);
   const handleDrawerClose = () => setIsDrawerOpen(false);
 
-  console.log('MainScreen: Rendering with students', students.map(s => ({ id: s.id, firstname: s.firstname, mail: s.mail })), 'sortedStudents', sortedStudents.map(s => ({ id: s.id, firstname: s.firstname, mail: s.mail })), 'searchTerm', searchTerm);
-
   return (
     <ThemeProvider theme={theme}>
       <ErrorBoundary>
         <Box sx={{ display: 'flex', minHeight: '100vh' }}>
           <CssBaseline />
-          
+
           <StyledAppBar position="fixed" open={isDrawerOpen} elevation={1} sx={{ bgcolor: 'white', color: 'text.primary' }}>
             <Toolbar>
               <IconButton
@@ -363,10 +348,7 @@ export default function MainScreen({ onLogout }) {
                 aria-label="open drawer"
                 onClick={handleDrawerOpen}
                 edge="start"
-                sx={{
-                  marginRight: 5,
-                  ...(isDrawerOpen && { display: 'none' }),
-                }}
+                sx={{ marginRight: 5, ...(isDrawerOpen && { display: 'none' }) }}
               >
                 <Menu />
               </IconButton>
@@ -425,34 +407,18 @@ export default function MainScreen({ onLogout }) {
                         }}
                       >
                         <ListItemIcon
-                          sx={{
-                            minWidth: 0,
-                            mr: isDrawerOpen ? 3 : 'auto',
-                            justifyContent: 'center',
-                            color: 'inherit',
-                          }}
+                          sx={{ minWidth: 0, mr: isDrawerOpen ? 3 : 'auto', justifyContent: 'center', color: 'inherit' }}
                         >
                           <Icon />
                         </ListItemIcon>
-                        <ListItemText 
-                          primary={item.name} 
-                          sx={{ opacity: isDrawerOpen ? 1 : 0, color: 'white' }} 
-                        />
+                        <ListItemText primary={item.name} sx={{ opacity: isDrawerOpen ? 1 : 0, color: 'white' }} />
                       </ListItemButton>
                     </ListItem>
                   );
                 })}
               </List>
-              
-              <Box sx={{ 
-                position: 'absolute', 
-                bottom: 0, 
-                left: 0, 
-                width: '100%', 
-                p: 2, 
-                borderTop: 1, 
-                borderColor: 'grey.800' 
-              }}>
+
+              <Box sx={{ position: 'absolute', bottom: 0, left: 0, width: '100%', p: 2, borderTop: 1, borderColor: 'grey.800' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, overflow: 'hidden' }}>
                   <Avatar sx={{ width: 40, height: 40, bgcolor: 'grey.600', flexShrink: 0 }}>
                     <User />
@@ -460,10 +426,10 @@ export default function MainScreen({ onLogout }) {
                   {isDrawerOpen && (
                     <Box sx={{ minWidth: 0 }}>
                       <Typography variant="body2" color="white" fontWeight={500} noWrap>
-                        John Doe
+                        {user?.name || 'John Doe'}
                       </Typography>
                       <Typography variant="caption" color="grey.400" noWrap>
-                        john@example.com
+                        {user?.email || 'john@example.com'}
                       </Typography>
                     </Box>
                   )}
@@ -474,15 +440,9 @@ export default function MainScreen({ onLogout }) {
 
           <Box component="main" sx={{ flexGrow: 1, bgcolor: 'background.default' }}>
             <DrawerHeader />
-            
+
             <Container maxWidth={false} sx={{ p: 3 }}>
-              <Box sx={{ 
-                mb: 3, 
-                display: 'flex', 
-                flexDirection: { xs: 'column', md: 'row' }, 
-                gap: 2, 
-                alignItems: 'center' 
-              }}>
+              <Box sx={{ mb: 3, display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2, alignItems: 'center' }}>
                 <TextField
                   fullWidth
                   variant="outlined"
@@ -499,10 +459,10 @@ export default function MainScreen({ onLogout }) {
                   }}
                   sx={{ maxWidth: { md: 400 } }}
                 />
-                <Button 
-                  variant="contained" 
-                  color="primary" 
-                  startIcon={<Plus />} 
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={<Plus />}
                   onClick={() => setAddModalOpen(true)}
                   sx={{ minWidth: 150 }}
                 >
@@ -519,10 +479,11 @@ export default function MainScreen({ onLogout }) {
                   transformOrigin={{ vertical: 'top', horizontal: 'right' }}
                 >
                   {filterOptions.map(({ key, label }) => (
-                    <MenuItem 
-                      key={key} 
-                      onClick={() => { setFilterType(key); setFilterAnchorEl(null); }} 
+                    <MenuItem
+                      key={key}
+                      onClick={() => { setFilterType(key); setFilterAnchorEl(null); }}
                       selected={filterType === key}
+                      sx={{ '&.Mui-selected': { bgcolor: 'primary.light', '&:hover': { bgcolor: 'primary.light' } } }}
                     >
                       {label}
                     </MenuItem>
@@ -553,7 +514,7 @@ export default function MainScreen({ onLogout }) {
                         <TableRow>
                           <TableCell colSpan={9} align="center" sx={{ py: 5 }}>
                             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 2 }}>
-                              <CircularProgress size={20} />
+                              <CircularProgress size={24} />
                               <Typography variant="body2">Loading students...</Typography>
                             </Box>
                           </TableCell>
@@ -571,7 +532,7 @@ export default function MainScreen({ onLogout }) {
                           <TableRow
                             key={`${student.id || student.mail}-${index}`}
                             hover
-                            sx={{ '&:nth-of-type(odd)': { bgcolor: 'grey.50' } }}
+                            sx={{ '&:nth-of-type(odd)': { bgcolor: 'grey.50' }, '&:hover': { bgcolor: 'action.hover' } }}
                           >
                             <TableCell padding="checkbox">
                               <Checkbox color="primary" />
@@ -582,16 +543,16 @@ export default function MainScreen({ onLogout }) {
                             <TableCell>{student.phone || 'N/A'}</TableCell>
                             <TableCell>{student.mail || 'N/A'}</TableCell>
                             <TableCell>
-                              <Typography 
-                                component="span" 
-                                variant="body2" 
-                                sx={{ 
-                                  bgcolor: 'green.100', 
-                                  color: 'green.800', 
-                                  px: 1, 
-                                  py: 0.5, 
+                              <Typography
+                                component="span"
+                                variant="body2"
+                                sx={{
+                                  bgcolor: 'green.100',
+                                  color: 'green.800',
+                                  px: 1,
+                                  py: 0.5,
                                   borderRadius: 1,
-                                  fontSize: '0.75rem'
+                                  fontSize: '0.75rem',
                                 }}
                               >
                                 {student.role || 'N/A'}
@@ -602,17 +563,19 @@ export default function MainScreen({ onLogout }) {
                             </TableCell>
                             <TableCell align="center">
                               <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
-                                <IconButton 
-                                  onClick={() => handleEditStudent(student)} 
-                                  color="primary" 
+                                <IconButton
+                                  onClick={() => handleEditStudent(student)}
+                                  color="primary"
                                   size="small"
+                                  aria-label="edit student"
                                 >
                                   <Edit3 size={16} />
                                 </IconButton>
-                                <IconButton 
-                                  onClick={() => handleDeleteStudent(student.id)} 
-                                  color="error" 
+                                <IconButton
+                                  onClick={() => handleDeleteStudent(student.id)}
+                                  color="error"
                                   size="small"
+                                  aria-label="delete student"
                                 >
                                   <Trash2 size={16} />
                                 </IconButton>
@@ -628,11 +591,13 @@ export default function MainScreen({ onLogout }) {
 
               {!loading && sortedStudents.length > 0 && (
                 <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
-                  <Pagination 
-                    count={totalPages} 
-                    page={currentPage} 
-                    onChange={handlePageChange} 
-                    color="primary" 
+                  <Pagination
+                    count={totalPages}
+                    page={currentPage}
+                    onChange={handlePageChange}
+                    color="primary"
+                    siblingCount={1}
+                    boundaryCount={1}
                   />
                 </Box>
               )}
@@ -653,6 +618,8 @@ export default function MainScreen({ onLogout }) {
                       required
                       fullWidth
                       variant="outlined"
+                      error={currentStudent?.[field] === '' && field !== 'role'} // Optional fields like role
+                      helperText={currentStudent?.[field] === '' && field !== 'role' ? 'This field is required' : ''}
                     />
                   ))}
                 </Box>
@@ -661,10 +628,11 @@ export default function MainScreen({ onLogout }) {
                 <Button onClick={() => setEditModalOpen(false)} color="inherit">
                   Cancel
                 </Button>
-                <Button 
-                  onClick={handleUpdateStudent} 
-                  variant="contained" 
+                <Button
+                  onClick={handleUpdateStudent}
+                  variant="contained"
                   color="primary"
+                  disabled={!currentStudent || Object.values(currentStudent).some(v => v === '' && v !== currentStudent.role)}
                 >
                   Save Changes
                 </Button>
