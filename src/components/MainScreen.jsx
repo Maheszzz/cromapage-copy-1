@@ -173,27 +173,28 @@ export default function MainScreen({ onLogout, user }) {
     localStorage.setItem(LOCAL_KEY, JSON.stringify(updatedStudents));
   };
 
+  const fetchStudents = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('https://687b2e57b4bc7cfbda84e292.mockapi.io/users');
+      if (!response.ok) throw new Error('Failed to fetch students');
+      const data = await response.json();
+      const localStudents = getLocalStudents();
+      const localIds = new Set(localStudents.map((s) => s.id || s.mail));
+      const filteredApi = data.filter((s) => !localIds.has(s.id || s.mail));
+      const allStudents = [...localStudents, ...filteredApi];
+      const uniqueStudents = Array.from(
+        new Map(allStudents.map(student => [student.id ? `${student.id}-${student.mail}` : student.mail, student])).values()
+      );
+      setStudents(uniqueStudents);
+    } catch (error) {
+      console.error('MainScreen: Error fetching students:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchStudents = async () => {
-      setLoading(true);
-      try {
-        const response = await fetch('https://687b2e57b4bc7cfbda84e292.mockapi.io/users');
-        if (!response.ok) throw new Error('Failed to fetch students');
-        const data = await response.json();
-        const localStudents = getLocalStudents();
-        const localIds = new Set(localStudents.map((s) => s.id || s.mail));
-        const filteredApi = data.filter((s) => !localIds.has(s.id || s.mail));
-        const allStudents = [...localStudents, ...filteredApi];
-        const uniqueStudents = Array.from(
-          new Map(allStudents.map(student => [student.id ? `${student.id}-${student.mail}` : student.mail, student])).values()
-        );
-        setStudents(uniqueStudents);
-      } catch (error) {
-        console.error('MainScreen: Error fetching students:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchStudents();
   }, []);
 
@@ -286,17 +287,52 @@ export default function MainScreen({ onLogout, user }) {
 
   const handleUpdateStudent = async (e) => {
     e.preventDefault();
-    if (!currentStudent?.id) return;
+    if (!currentStudent?.id) {
+      console.error('MainScreen: Invalid student ID for update');
+      return;
+    }
+
+    // Check if student ID exists in current students list
+    const studentExists = students.some((s) => s.id === currentStudent.id);
+    if (!studentExists) {
+      console.warn(`MainScreen: Student with ID ${currentStudent.id} not found in local list. Refreshing students.`);
+      await fetchStudents();
+      return;
+    }
+
     try {
+      // Prepare sanitized student data for update
+      const updateData = {
+        firstname: currentStudent.firstname || '',
+        lastname: currentStudent.lastname || '',
+        age: currentStudent.age || '',
+        phone: currentStudent.phone || '',
+        mail: currentStudent.mail || '',
+        role: currentStudent.role || '',
+        date: currentStudent.date || new Date().toISOString(),
+      };
+
       const response = await fetch(
         `https://687b2e57b4bc7cfbda84e292.mockapi.io/users/${currentStudent.id}`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(currentStudent),
+          body: JSON.stringify(updateData),
         }
       );
-      if (!response.ok) throw new Error('Update failed');
+      if (!response.ok) {
+        if (response.status === 404) {
+          console.warn(`MainScreen: Student with ID ${currentStudent.id} not found on server. Removing from local list.`);
+          setStudents((prev) => prev.filter((s) => s.id !== currentStudent.id));
+          removeLocalStudent(currentStudent.id);
+          setEditModalOpen(false);
+          setCurrentStudent(null);
+          return;
+        }
+        const errorText = await response.text();
+        console.error('MainScreen: Update failed with status', response.status, errorText);
+        throw new Error('Update failed');
+      }
       const updatedStudent = await response.json();
       setStudents((prev) => {
         const updated = prev.map((s) => (s.id === updatedStudent.id ? updatedStudent : s));
