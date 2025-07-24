@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Login from './components/Login';
 import SignUp from './components/SignUp';
-import MainScreenComponent from './components/MainScreen';
+import MainScreen from './components/MainScreen';
 
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -13,13 +13,13 @@ export default function App() {
       const storedStatus = sessionStorage.getItem('isLoggedIn');
       if (storedStatus === 'true') {
         const storedEmail = sessionStorage.getItem('userEmail') || '';
-        const storedName = sessionStorage.getItem('userName') || 'Guest';
+        const storedName = sessionStorage.getItem('userName') || '';
         const storedLastLogin = sessionStorage.getItem('lastLogin') || new Date().toISOString();
 
-        // Basic validation
+        // Basic validation for email format
         if (storedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(storedEmail)) {
           console.warn('Invalid email format in sessionStorage, resetting login');
-          setIsLoggedIn(false);
+          clearSession();
           return;
         }
 
@@ -28,18 +28,22 @@ export default function App() {
       }
     } catch (error) {
       console.error('Error accessing sessionStorage:', error);
-      setIsLoggedIn(false);
+      clearSession();
     }
   }, []);
 
+  const clearSession = () => {
+    sessionStorage.removeItem('isLoggedIn');
+    sessionStorage.removeItem('userEmail');
+    sessionStorage.removeItem('userName');
+    sessionStorage.removeItem('lastLogin');
+    setIsLoggedIn(false);
+    setUser({ name: '', email: '', lastLogin: '' });
+  };
+
   const handleLogout = () => {
     try {
-      sessionStorage.removeItem('isLoggedIn');
-      sessionStorage.removeItem('userName');
-      sessionStorage.removeItem('userEmail');
-      sessionStorage.removeItem('lastLogin');
-      setIsLoggedIn(false);
-      setUser({ name: '', email: '', lastLogin: '' });
+      clearSession();
     } catch (error) {
       console.error('Error during logout:', error);
     }
@@ -49,9 +53,9 @@ export default function App() {
     try {
       sessionStorage.setItem('isLoggedIn', 'true');
       sessionStorage.setItem('userEmail', email);
-      sessionStorage.setItem('userName', name || 'Guest');
-      sessionStorage.setItem('lastLogin', new Date().toISOString());
-      setUser({ name: name || 'Guest', email, lastLogin: new Date().toISOString() });
+      sessionStorage.setItem('userName', name || email.split('@')[0] || 'Guest');
+      sessionStorage.setItem('lastLogin', new Date().toISOString()); // 02:57 PM IST, July 24, 2025
+      setUser({ name: name || email.split('@')[0] || 'Guest', email, lastLogin: new Date().toISOString() });
       setIsLoggedIn(true);
     } catch (error) {
       console.error('Error during login:', error);
@@ -62,9 +66,9 @@ export default function App() {
     try {
       sessionStorage.setItem('isLoggedIn', 'true');
       sessionStorage.setItem('userEmail', email);
-      sessionStorage.setItem('userName', name || 'Guest');
-      sessionStorage.setItem('lastLogin', new Date().toISOString());
-      setUser({ name: name || 'Guest', email, lastLogin: new Date().toISOString() });
+      sessionStorage.setItem('userName', name || email.split('@')[0] || 'Guest');
+      sessionStorage.setItem('lastLogin', new Date().toISOString()); // 02:57 PM IST, July 24, 2025
+      setUser({ name: name || email.split('@')[0] || 'Guest', email, lastLogin: new Date().toISOString() });
       setIsLoggedIn(true);
     } catch (error) {
       console.error('Error during signup:', error);
@@ -72,7 +76,7 @@ export default function App() {
   };
 
   if (isLoggedIn) {
-    return <MainScreenComponent onLogout={handleLogout} user={user} />;
+    return <MainScreen onLogout={handleLogout} user={user} />;
   }
 
   return isLoginPage ? (

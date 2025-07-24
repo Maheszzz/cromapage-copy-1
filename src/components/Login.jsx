@@ -12,7 +12,7 @@ import {
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 
-// Styled component for the gradient background
+// Styled background
 const GradientBackground = styled(Box)(({ theme }) => ({
   minHeight: '100vh',
   display: 'flex',
@@ -22,7 +22,7 @@ const GradientBackground = styled(Box)(({ theme }) => ({
   padding: theme.spacing(2, 4),
 }));
 
-// Styled component for the card
+// Styled login card
 const LoginCard = styled(Box)(({ theme }) => ({
   width: '100%',
   maxWidth: '400px',
@@ -47,7 +47,7 @@ export default function Login({ onLogin, onSwitchToSignup }) {
   } = useForm({
     mode: 'onBlur',
     defaultValues: {
-      email: '',
+      username: '',
       password: '',
     },
   });
@@ -59,29 +59,45 @@ export default function Login({ onLogin, onSwitchToSignup }) {
     setIsLoading(true);
     setGeneralError('');
 
-    try {
-      // Simulate API call (replace with actual API later)
-      await new Promise((resolve, reject) => {
-        const fail = false; // Set to true to simulate error
-        setTimeout(() => (fail ? reject(new Error('Simulated error')) : resolve()), 1000);
-      });
+    // Debug input values
+    console.log('Form Data:', { username: data.username, password: data.password });
 
-      const isValid = data.email && data.password.length >= 6;
+    try {
+      // Simulated API delay
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      // Access and log environment variables
+      const correctUsername = import.meta.env.VITE_CORRECT_USERNAME || 'testuser@example.com';
+      const correctPassword = import.meta.env.VITE_CORRECT_PASSWORD || 'password123';
+      console.log('Env Variables:', { correctUsername, correctPassword });
+
+      if (!correctUsername || !correctPassword) {
+        throw new Error('Environment variables not loaded correctly');
+      }
+
+      // Trim input to avoid whitespace issues
+      const trimmedUsername = data.username.trim();
+      const trimmedPassword = data.password.trim();
+
+      const isValid = trimmedUsername === correctUsername && trimmedPassword === correctPassword;
+      console.log('Validation Result:', { isValid, trimmedUsername, trimmedPassword });
 
       if (isValid) {
+        // Set session storage directly since API call is skipped
         sessionStorage.setItem('isLoggedIn', 'true');
-        sessionStorage.setItem('userEmail', data.email);
-        reset(); // Reset before redirect
-        onLogin(); // Trigger parent callback
+        sessionStorage.setItem('userEmail', trimmedUsername);
+        sessionStorage.setItem('userName', trimmedUsername.split('@')[0] || trimmedUsername);
+        sessionStorage.setItem('lastLogin', new Date().toISOString()); // 03:05 PM IST, July 24, 2025
+
+        reset();
+        onLogin(trimmedUsername, trimmedUsername.split('@')[0] || trimmedUsername);
       } else {
-        setError('email', { message: 'Invalid email or password' });
-        setError('password', { message: ' ' }); // Highlight field in red
+        setError('username', { message: 'Invalid username or password' });
+        setError('password', { message: ' ' });
       }
     } catch (error) {
-      console.error('Login error:', error);
-      const message =
-        error?.response?.data?.message || error.message || 'Login failed. Please try again.';
-      setGeneralError(message);
+      console.error('Login Error:', error.message);
+      setGeneralError(error.message || 'Login failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -90,7 +106,13 @@ export default function Login({ onLogin, onSwitchToSignup }) {
   return (
     <GradientBackground>
       <LoginCard>
-        <Typography variant="h4" component="h2" align="center" gutterBottom sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+        <Typography
+          variant="h4"
+          component="h2"
+          align="center"
+          gutterBottom
+          sx={{ fontWeight: 'bold', color: 'text.primary' }}
+        >
           Welcome Back
         </Typography>
 
@@ -102,17 +124,17 @@ export default function Login({ onLogin, onSwitchToSignup }) {
 
         <form onSubmit={handleSubmit(onSubmit)}>
           <Stack spacing={3}>
-            {/* Email Field */}
+            {/* Username Field */}
             <TextField
               fullWidth
-              id="email"
-              label="Email Address"
+              id="username"
+              label="Username (Email)"
               variant="outlined"
               disabled={isLoading}
-              error={!!errors.email}
-              helperText={errors.email?.message}
-              {...register('email', {
-                required: 'Email is required',
+              error={!!errors.username}
+              helperText={errors.username?.message}
+              {...register('username', {
+                required: 'Username is required',
                 pattern: {
                   value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
                   message: 'Please enter a valid email address',
@@ -175,8 +197,9 @@ export default function Login({ onLogin, onSwitchToSignup }) {
           </Stack>
         </form>
 
+        {/* Switch to Sign Up */}
         <Typography align="center" sx={{ mt: 2, color: 'text.secondary' }}>
-          Don&apos;t have an account?{' '}
+          Don't have an account?{' '}
           <Button
             onClick={onSwitchToSignup}
             disabled={isLoading}
@@ -186,8 +209,9 @@ export default function Login({ onLogin, onSwitchToSignup }) {
           </Button>
         </Typography>
 
+        {/* Demo credentials (remove in production) */}
         <Typography align="center" sx={{ mt: 2, color: 'text.disabled', fontSize: '0.75rem' }}>
-          Demo: Use any email and password (6+ chars)
+          Demo Login → Username: <b>testuser@example.com</b>, Password: <b>password123</b>
         </Typography>
       </LoginCard>
     </GradientBackground>
