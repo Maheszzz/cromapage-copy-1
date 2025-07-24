@@ -2,23 +2,40 @@ import React, { useState } from 'react';
 import { User, Mail, Lock, Eye, EyeOff, Bell, Settings, BarChart3, LogOut } from 'lucide-react';
 import PropTypes from 'prop-types';
 
-function MainScreen({ onLogout, user }) {
+function MainScreen({ onLogout, user = {} }) {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     const toggleSidebar = () => {
         setIsSidebarOpen(!isSidebarOpen);
     };
 
+    // Fallback for user data
+    const displayName = user.name || 'Guest';
+    const lastLogin = user.lastLogin ? new Date(user.lastLogin).toLocaleString() : 'Not available';
+
     return (
         <div className="flex min-h-screen">
             {/* Sidebar */}
-            <div className={`fixed inset-0 z-30 transition-transform transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
-                <div className="flex flex-col h-full bg-white shadow-md w-64 p-4">
+            <div
+                className={`fixed inset-0 z-40 transition-transform transform ${
+                    isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+                } lg:translate-x-0`}
+            >
+                <div className="flex flex-col h-full bg-white shadow-lg w-64 p-4">
                     {/* Close button for mobile */}
                     <div className="flex justify-end lg:hidden">
-                        <button onClick={toggleSidebar} className="p-2 text-gray-500 rounded-md hover:bg-gray-100 focus:outline-none">
+                        <button
+                            onClick={toggleSidebar}
+                            className="p-2 text-gray-500 rounded-md hover:bg-gray-100 focus:outline-none"
+                            aria-label="Close sidebar"
+                        >
                             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M6 18L18 6M6 6l12 12"
+                                />
                             </svg>
                         </button>
                     </div>
@@ -69,6 +86,7 @@ function MainScreen({ onLogout, user }) {
                         <button
                             onClick={onLogout}
                             className="flex items-center w-full p-2 text-gray-900 rounded-lg hover:bg-gray-100"
+                            aria-label="Logout"
                         >
                             <LogOut className="w-5 h-5 mr-3" />
                             Logout
@@ -88,20 +106,30 @@ function MainScreen({ onLogout, user }) {
                         <button
                             onClick={toggleSidebar}
                             className="p-2 text-gray-500 rounded-md hover:bg-gray-100 focus:outline-none"
+                            aria-label="Open sidebar"
                         >
                             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M4 6h16M4 12h16m-7 6h7"
+                                />
                             </svg>
                         </button>
                     </div>
                 </div>
 
                 <div className="mt-4">
-                    <h3 className="text-lg font-semibold text-gray-800">Welcome back, {user.name}!</h3>
-                    <p className="mt-1 text-sm text-gray-600">You last logged in on {new Date().toLocaleString()}</p>
+                    <h3 className="text-lg font-semibold text-gray-800">Welcome back, {displayName}!</h3>
+                    <p className="mt-1 text-sm text-gray-600">You last logged in on {lastLogin}</p>
                 </div>
 
                 {/* Add your main content here */}
+                <div className="mt-6">
+                    {/* Placeholder for additional content */}
+                    <p className="text-gray-600">Add your dashboard content here.</p>
+                </div>
             </div>
         </div>
     );
@@ -111,8 +139,9 @@ MainScreen.propTypes = {
     onLogout: PropTypes.func.isRequired,
     user: PropTypes.shape({
         name: PropTypes.string,
-        email: PropTypes.string
-    })
+        email: PropTypes.string,
+        lastLogin: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    }),
 };
 
 export default MainScreen;
