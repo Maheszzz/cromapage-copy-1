@@ -1,7 +1,15 @@
 import React, { useEffect, useState } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom'; // Import routing components
 import Login from './components/Login';
 import SignUp from './components/SignUp';
 import MainScreen from './components/MainScreen';
+
+// Placeholder page components (create these in separate files, e.g., HomePage.jsx)
+function HomePage() { return <div>Welcome to Home!</div>; }
+function AboutPage() { return <div>About Us Page</div>; }
+function FinancePage() { return <div>Finance Dashboard</div>; }
+function TravelPage() { return <div>Travel Section</div>; }
+function AcademicPage() { return <div>Academic Tools</div>; }
 
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -54,7 +62,7 @@ export default function App() {
       sessionStorage.setItem('isLoggedIn', 'true');
       sessionStorage.setItem('userEmail', email);
       sessionStorage.setItem('userName', name || email.split('@')[0] || 'Guest');
-      sessionStorage.setItem('lastLogin', new Date().toISOString()); // 02:57 PM IST, July 24, 2025
+      sessionStorage.setItem('lastLogin', new Date().toISOString());
       setUser({ name: name || email.split('@')[0] || 'Guest', email, lastLogin: new Date().toISOString() });
       setIsLoggedIn(true);
     } catch (error) {
@@ -67,7 +75,7 @@ export default function App() {
       sessionStorage.setItem('isLoggedIn', 'true');
       sessionStorage.setItem('userEmail', email);
       sessionStorage.setItem('userName', name || email.split('@')[0] || 'Guest');
-      sessionStorage.setItem('lastLogin', new Date().toISOString()); // 02:57 PM IST, July 24, 2025
+      sessionStorage.setItem('lastLogin', new Date().toISOString());
       setUser({ name: name || email.split('@')[0] || 'Guest', email, lastLogin: new Date().toISOString() });
       setIsLoggedIn(true);
     } catch (error) {
@@ -75,19 +83,33 @@ export default function App() {
     }
   };
 
-  if (isLoggedIn) {
-    return <MainScreen onLogout={handleLogout} user={user} />;
+  // If not logged in, show Login or SignUp
+  if (!isLoggedIn) {
+    return isLoginPage ? (
+      <Login
+        onLogin={(email, name) => handleLogin(email, name)}
+        onSwitchToSignup={() => setIsLoginPage(false)}
+      />
+    ) : (
+      <SignUp
+        onSignup={(email, name) => handleSignup(email, name)}
+        onSwitchToLogin={() => setIsLoginPage(true)}
+      />
+    );
   }
 
-  return isLoginPage ? (
-    <Login
-      onLogin={(email, name) => handleLogin(email, name)}
-      onSwitchToSignup={() => setIsLoginPage(false)}
-    />
-  ) : (
-    <SignUp
-      onSignup={(email, name) => handleSignup(email, name)}
-      onSwitchToLogin={() => setIsLoginPage(true)}
-    />
+  // If logged in, render routed MainScreen
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<MainScreen onLogout={handleLogout} user={user}><HomePage /></MainScreen>} />
+        <Route path="/about" element={<MainScreen onLogout={handleLogout} user={user}><AboutPage /></MainScreen>} />
+        <Route path="/finance" element={<MainScreen onLogout={handleLogout} user={user}><FinancePage /></MainScreen>} />
+        <Route path="/travel" element={<MainScreen onLogout={handleLogout} user={user}><TravelPage /></MainScreen>} />
+        <Route path="/academic" element={<MainScreen onLogout={handleLogout} user={user}><AcademicPage /></MainScreen>} />
+        {/* Catch-all for unknown routes */}
+        <Route path="*" element={<div>404 - Page Not Found</div>} />
+      </Routes>
+    </BrowserRouter>
   );
 }

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Plus, Search, Edit3, User, LogOut, Trash2, Filter, X,
   Home, DollarSign, Plane, GraduationCap, Menu, ChevronLeft
@@ -127,7 +128,9 @@ const theme = createTheme({
   },
 });
 
-export default function MainScreen({ onLogout, user }) {
+export default function MainScreen({ onLogout, user, children }) { // Added children prop for route content
+  const navigate = useNavigate();
+  const location = useLocation();
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -139,17 +142,48 @@ export default function MainScreen({ onLogout, user }) {
   const [filterAnchorEl, setFilterAnchorEl] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(true);
   const [activeMenuItem, setActiveMenuItem] = useState('Academic');
-  const [currentPage, setCurrentPage] = useState(1);
+  const [menuItems, setMenuItems] = useState([]);
   const [rowsPerPage] = useState(10);
-
+  const [currentPage, setCurrentPage] = useState(1);
   const LOCAL_KEY = 'localStudents';
 
-  const menuItems = [
-    { name: 'Home', icon: Home },
-    { name: 'Finance', icon: DollarSign },
-    { name: 'Travel', icon: Plane },
-    { name: 'Academic', icon: GraduationCap },
-  ];
+  // Fetch menu items from menu.json
+  useEffect(() => {
+    const fetchMenu = async () => {
+      console.log('Calling dummy API at /menu.json...');
+      try {
+        const response = await fetch('/menu.json');
+        if (!response.ok) throw new Error(`Failed to fetch menu: ${response.status}`);
+        const data = await response.json();
+        const mappedData = data.map((item) => ({
+          ...item,
+          icon: { Home, User, DollarSign, Plane, GraduationCap }[item.icon] || User,
+        }));
+        setMenuItems(mappedData);
+        console.log('Menu loaded');
+      } catch (error) {
+        console.error('MainScreen: Error fetching menu:', error);
+        const fallbackMenu = [
+          { id: 1, name: 'Home', icon: Home, path: '/' },
+          { id: 2, name: 'About', icon: User, path: '/about' },
+          { id: 3, name: 'Finance', icon: DollarSign, path: '/finance' },
+          { id: 4, name: 'Travel', icon: Plane, path: '/travel' },
+          { id: 5, name: 'Academic', icon: GraduationCap, path: '/academic' },
+        ];
+        setMenuItems(fallbackMenu);
+        console.log('Menu loaded (fallback)');
+      }
+    };
+    fetchMenu();
+  }, []);
+
+  // Update activeMenuItem based on current route
+  useEffect(() => {
+    const currentMenuItem = menuItems.find((item) => item.path === location.pathname);
+    if (currentMenuItem) {
+      setActiveMenuItem(currentMenuItem.name);
+    }
+  }, [location.pathname, menuItems]);
 
   const getLocalStudents = () => {
     try {
@@ -184,7 +218,13 @@ export default function MainScreen({ onLogout, user }) {
       const filteredApi = data.filter((s) => !localIds.has(s.id || s.mail));
       const allStudents = [...localStudents, ...filteredApi];
       const uniqueStudents = Array.from(
-        new Map(allStudents.map(student => [student.id ? `${student.id}-${student.mail}` : student.mail, student])).values()
+        new Map(allStudents.map((student) => {
+          const key = student.id ? `${student.id}-${student.mail}` : student.mail;
+          if (allStudents.filter((s) => (s.id ? `${s.id}-${s.mail}` : s.mail) === key).length > 1) {
+            console.warn('Duplicate student detected:', student);
+          }
+          return [key, student];
+        })).values()
       );
       setStudents(uniqueStudents);
     } catch (error) {
@@ -243,17 +283,21 @@ export default function MainScreen({ onLogout, user }) {
       saveLocalStudent(addedStudent);
       setStudents((prev) => {
         const updated = [addedStudent, ...prev];
-        return Array.from(new Map(updated.map(student => [student.id ? `${student.id}-${student.mail}` : student.mail, student])).values());
+        const unique = Array.from(
+          new Map(updated.map((student) => [student.id ? `${student.id}-${student.mail}` : student.mail, student])).values()
+        );
+        return unique;
       });
       setCurrentPage(1);
       setSearchTerm('');
     } catch (error) {
       console.error('MainScreen: Error adding student:', error);
+      await fetchStudents();
     }
   };
 
   const handleEditStudent = (student) => {
-    setCurrentStudent({ ...student, id: student.id || student.mail }); // Ensure id is set
+    setCurrentStudent({ ...student, id: student.id || student.mail });
     setEditModalOpen(true);
   };
 
@@ -267,7 +311,7 @@ export default function MainScreen({ onLogout, user }) {
         if (response.status === 404) {
           setStudents((prev) => {
             const updated = prev.filter((s) => s.id !== id);
-            return Array.from(new Map(updated.map(student => [student.id ? `${student.id}-${student.mail}` : student.mail, student])).values());
+            return Array.from(new Map(updated.map((student) => [student.id ? `${student.id}-${student.mail}` : student.mail, student])).values());
           });
           removeLocalStudent(id);
         } else {
@@ -276,7 +320,7 @@ export default function MainScreen({ onLogout, user }) {
       } else {
         setStudents((prev) => {
           const updated = prev.filter((s) => s.id !== id);
-          return Array.from(new Map(updated.map(student => [student.id ? `${student.id}-${student.mail}` : student.mail, student])).values());
+          return Array.from(new Map(updated.map((student) => [student.id ? `${student.id}-${student.mail}` : student.mail, student])).values());
         });
         removeLocalStudent(id);
       }
@@ -292,7 +336,6 @@ export default function MainScreen({ onLogout, user }) {
       return;
     }
 
-    // Check if student ID exists in current students list
     const studentExists = students.some((s) => s.id === currentStudent.id);
     if (!studentExists) {
       console.warn(`MainScreen: Student with ID ${currentStudent.id} not found in local list. Refreshing students.`);
@@ -301,7 +344,6 @@ export default function MainScreen({ onLogout, user }) {
     }
 
     try {
-      // Prepare sanitized student data for update
       const updateData = {
         firstname: currentStudent.firstname || '',
         lastname: currentStudent.lastname || '',
@@ -336,7 +378,7 @@ export default function MainScreen({ onLogout, user }) {
       const updatedStudent = await response.json();
       setStudents((prev) => {
         const updated = prev.map((s) => (s.id === updatedStudent.id ? updatedStudent : s));
-        return Array.from(new Map(updated.map(student => [student.id ? `${student.id}-${student.mail}` : student.mail, student])).values());
+        return Array.from(new Map(updated.map((student) => [student.id ? `${student.id}-${student.mail}` : student.mail, student])).values());
       });
       setEditModalOpen(false);
       setCurrentStudent(null);
@@ -368,21 +410,17 @@ export default function MainScreen({ onLogout, user }) {
     setCurrentPage(page);
   };
 
-  const handleDrawerOpen = () => setIsDrawerOpen(true);
-  const handleDrawerClose = () => setIsDrawerOpen(false);
-
   return (
     <ThemeProvider theme={theme}>
       <ErrorBoundary>
         <Box sx={{ display: 'flex', minHeight: '100vh' }}>
           <CssBaseline />
-
           <StyledAppBar position="fixed" open={isDrawerOpen} elevation={1} sx={{ bgcolor: 'white', color: 'text.primary' }}>
             <Toolbar>
               <IconButton
                 color="inherit"
                 aria-label="open drawer"
-                onClick={handleDrawerOpen}
+                onClick={() => setIsDrawerOpen(!isDrawerOpen)}
                 edge="start"
                 sx={{ marginRight: 5, ...(isDrawerOpen && { display: 'none' }) }}
               >
@@ -418,7 +456,7 @@ export default function MainScreen({ onLogout, user }) {
                   MyApp
                 </Typography>
               )}
-              <IconButton onClick={handleDrawerClose} sx={{ color: 'white' }}>
+              <IconButton onClick={() => setIsDrawerOpen(false)} sx={{ color: 'white' }}>
                 <ChevronLeft />
               </IconButton>
             </DrawerHeader>
@@ -429,9 +467,12 @@ export default function MainScreen({ onLogout, user }) {
                   const Icon = item.icon;
                   const isActive = activeMenuItem === item.name;
                   return (
-                    <ListItem key={item.name} disablePadding sx={{ display: 'block' }}>
+                    <ListItem key={item.id} disablePadding sx={{ display: 'block' }}>
                       <ListItemButton
-                        onClick={() => setActiveMenuItem(item.name)}
+                        onClick={() => {
+                          setActiveMenuItem(item.name);
+                          navigate(item.path);
+                        }}
                         sx={{
                           minHeight: 48,
                           justifyContent: isDrawerOpen ? 'initial' : 'center',
@@ -476,7 +517,8 @@ export default function MainScreen({ onLogout, user }) {
 
           <Box component="main" sx={{ flexGrow: 1, bgcolor: 'background.default' }}>
             <DrawerHeader />
-
+            {/* Render route-specific children here (e.g., HomePage content) */}
+            {children}
             <Container maxWidth={false} sx={{ p: 3 }}>
               <Box sx={{ mb: 3, display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2, alignItems: 'center' }}>
                 <TextField
@@ -564,61 +606,66 @@ export default function MainScreen({ onLogout, user }) {
                           </TableCell>
                         </TableRow>
                       ) : (
-                        currentRows.map((student, index) => (
-                          <TableRow
-                            key={`${student.id || student.mail}-${index}`}
-                            hover
-                            sx={{ '&:nth-of-type(odd)': { bgcolor: 'grey.50' }, '&:hover': { bgcolor: 'action.hover' } }}
-                          >
-                            <TableCell padding="checkbox">
-                              <Checkbox color="primary" />
-                            </TableCell>
-                            <TableCell>{student.firstname || 'N/A'}</TableCell>
-                            <TableCell>{student.lastname || 'N/A'}</TableCell>
-                            <TableCell>{student.age || 'N/A'}</TableCell>
-                            <TableCell>{student.phone || 'N/A'}</TableCell>
-                            <TableCell>{student.mail || 'N/A'}</TableCell>
-                            <TableCell>
-                              <Typography
-                                component="span"
-                                variant="body2"
-                                sx={{
-                                  bgcolor: 'green.100',
-                                  color: 'green.800',
-                                  px: 1,
-                                  py: 0.5,
-                                  borderRadius: 1,
-                                  fontSize: '0.75rem',
-                                }}
-                              >
-                                {student.role || 'N/A'}
-                              </Typography>
-                            </TableCell>
-                            <TableCell>
-                              {student.date ? new Date(student.date).toLocaleDateString() : 'N/A'}
-                            </TableCell>
-                            <TableCell align="center">
-                              <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
-                                <IconButton
-                                  onClick={() => handleEditStudent(student)}
-                                  color="primary"
-                                  size="small"
-                                  aria-label="edit student"
+                        currentRows.map((student) => {
+                          if (!student.id) {
+                            console.warn('Student missing ID:', student);
+                          }
+                          return (
+                            <TableRow
+                              key={student.id || student.mail}
+                              hover
+                              sx={{ '&:nth-of-type(odd)': { bgcolor: 'grey.50' }, '&:hover': { bgcolor: 'action.hover' } }}
+                            >
+                              <TableCell padding="checkbox">
+                                <Checkbox color="primary" />
+                              </TableCell>
+                              <TableCell>{student.firstname || 'N/A'}</TableCell>
+                              <TableCell>{student.lastname || 'N/A'}</TableCell>
+                              <TableCell>{student.age || 'N/A'}</TableCell>
+                              <TableCell>{student.phone || 'N/A'}</TableCell>
+                              <TableCell>{student.mail || 'N/A'}</TableCell>
+                              <TableCell>
+                                <Typography
+                                  component="span"
+                                  variant="body2"
+                                  sx={{
+                                    bgcolor: 'green.100',
+                                    color: 'green.800',
+                                    px: 1,
+                                    py: 0.5,
+                                    borderRadius: 1,
+                                    fontSize: '0.75rem',
+                                  }}
                                 >
-                                  <Edit3 size={16} />
-                                </IconButton>
-                                <IconButton
-                                  onClick={() => handleDeleteStudent(student.id)}
-                                  color="error"
-                                  size="small"
-                                  aria-label="delete student"
-                                >
-                                  <Trash2 size={16} />
-                                </IconButton>
-                              </Box>
-                            </TableCell>
-                          </TableRow>
-                        ))
+                                  {student.role || 'N/A'}
+                                </Typography>
+                              </TableCell>
+                              <TableCell>
+                                {student.date ? new Date(student.date).toLocaleDateString() : 'N/A'}
+                              </TableCell>
+                              <TableCell align="center">
+                                <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
+                                  <IconButton
+                                    onClick={() => handleEditStudent(student)}
+                                    color="primary"
+                                    size="small"
+                                    aria-label="edit student"
+                                  >
+                                    <Edit3 size={16} />
+                                  </IconButton>
+                                  <IconButton
+                                    onClick={() => handleDeleteStudent(student.id)}
+                                    color="error"
+                                    size="small"
+                                    aria-label="delete student"
+                                  >
+                                    <Trash2 size={16} />
+                                  </IconButton>
+                                </Box>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
                       )}
                     </TableBody>
                   </Table>
@@ -654,7 +701,7 @@ export default function MainScreen({ onLogout, user }) {
                       required
                       fullWidth
                       variant="outlined"
-                      error={currentStudent?.[field] === '' && field !== 'role'} // Optional fields like role
+                      error={currentStudent?.[field] === '' && field !== 'role'}
                       helperText={currentStudent?.[field] === '' && field !== 'role' ? 'This field is required' : ''}
                     />
                   ))}
@@ -668,7 +715,7 @@ export default function MainScreen({ onLogout, user }) {
                   onClick={handleUpdateStudent}
                   variant="contained"
                   color="primary"
-                  disabled={!currentStudent || Object.values(currentStudent).some(v => v === '' && v !== currentStudent.role)}
+                  disabled={!currentStudent || Object.values(currentStudent).some((v) => v === '' && v !== currentStudent.role)}
                 >
                   Save Changes
                 </Button>
