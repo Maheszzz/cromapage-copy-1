@@ -5,7 +5,7 @@ function MainScreen() {
 
     async function fetchStudents() {
         try {
-            const response = await fetch('https://687b2e5…….mockapi.io/users');
+            const response = await fetch('https://688c9175cd9d22dda5cda115.mockapi.io/gs');
             if (!response.ok) {
                 throw new Error(`Failed to fetch students: ${response.status} ${response.statusText}`);
             }

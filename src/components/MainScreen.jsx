@@ -181,7 +181,7 @@ export default function MainScreen({ onLogout, user, children }) {
   const fetchStudents = async () => {
     setLoading(true);
     try {
-      const response = await fetch('https://687b2e57b4bc7cfbda84e292.mockapi.io/users');
+      const response = await fetch('https://688c9175cd9d22dda5cda115.mockapi.io/gs');
       if (!response.ok) throw new Error('Failed to fetch students');
       const data = await response.json();
       const localStudents = getLocalStudents();
