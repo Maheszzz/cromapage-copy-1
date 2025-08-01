@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Plus, Search, Edit3, User, LogOut, Trash2, Filter, X,
@@ -13,6 +13,7 @@ import {
   DialogActions, InputAdornment, Checkbox, Pagination, CircularProgress, Avatar,
   createTheme, ThemeProvider, styled
 } from '@mui/material';
+import { MenuContext } from '../components/MenuContext'; // relative
 
 // --- Mini Variant Drawer Styled Components ---
 const drawerWidth = 240;
@@ -128,9 +129,10 @@ const theme = createTheme({
   },
 });
 
-export default function MainScreen({ onLogout, user, children }) { // Added children prop for route content
+export default function MainScreen({ onLogout, user, children }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const { menuItems } = useContext(MenuContext); // Use context for menuItems
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -142,40 +144,9 @@ export default function MainScreen({ onLogout, user, children }) { // Added chil
   const [filterAnchorEl, setFilterAnchorEl] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(true);
   const [activeMenuItem, setActiveMenuItem] = useState('Academic');
-  const [menuItems, setMenuItems] = useState([]);
   const [rowsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
   const LOCAL_KEY = 'localStudents';
-
-  // Fetch menu items from menu.json
-  useEffect(() => {
-    const fetchMenu = async () => {
-      console.log('Calling dummy API at /menu.json...');
-      try {
-        const response = await fetch('/menu.json');
-        if (!response.ok) throw new Error(`Failed to fetch menu: ${response.status}`);
-        const data = await response.json();
-        const mappedData = data.map((item) => ({
-          ...item,
-          icon: { Home, User, DollarSign, Plane, GraduationCap }[item.icon] || User,
-        }));
-        setMenuItems(mappedData);
-        console.log('Menu loaded');
-      } catch (error) {
-        console.error('MainScreen: Error fetching menu:', error);
-        const fallbackMenu = [
-          { id: 1, name: 'Home', icon: Home, path: '/' },
-          { id: 2, name: 'About', icon: User, path: '/about' },
-          { id: 3, name: 'Finance', icon: DollarSign, path: '/finance' },
-          { id: 4, name: 'Travel', icon: Plane, path: '/travel' },
-          { id: 5, name: 'Academic', icon: GraduationCap, path: '/academic' },
-        ];
-        setMenuItems(fallbackMenu);
-        console.log('Menu loaded (fallback)');
-      }
-    };
-    fetchMenu();
-  }, []);
 
   // Update activeMenuItem based on current route
   useEffect(() => {

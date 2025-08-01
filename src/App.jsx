@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'; // Import routi
 import Login from './components/Login';
 import SignUp from './components/SignUp';
 import MainScreen from './components/MainScreen';
+import { MenuProvider } from './components/MenuContext';
 
 // Placeholder page components (create these in separate files, e.g., HomePage.jsx)
 function HomePage() { return <div>Welcome to Home!</div>; }
@@ -100,16 +101,27 @@ export default function App() {
 
   // If logged in, render routed MainScreen
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<MainScreen onLogout={handleLogout} user={user}><HomePage /></MainScreen>} />
-        <Route path="/about" element={<MainScreen onLogout={handleLogout} user={user}><AboutPage /></MainScreen>} />
-        <Route path="/finance" element={<MainScreen onLogout={handleLogout} user={user}><FinancePage /></MainScreen>} />
-        <Route path="/travel" element={<MainScreen onLogout={handleLogout} user={user}><TravelPage /></MainScreen>} />
-        <Route path="/academic" element={<MainScreen onLogout={handleLogout} user={user}><AcademicPage /></MainScreen>} />
-        {/* Catch-all for unknown routes */}
-        <Route path="*" element={<div>404 - Page Not Found</div>} />
-      </Routes>
-    </BrowserRouter>
+    <MenuProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<MainScreen onLogout={handleLogout} user={user}><HomePage /></MainScreen>} />
+          <Route path="/about" element={<MainScreen onLogout={handleLogout} user={user}><AboutPage /></MainScreen>} />
+          <Route path="/finance" element={<MainScreen onLogout={handleLogout} user={user}><FinancePage /></MainScreen>} />
+          <Route path="/travel" element={<MainScreen onLogout={handleLogout} user={user}><TravelPage /></MainScreen>} />
+          <Route path="/academic" element={<MainScreen onLogout={handleLogout} user={user}><AcademicPage /></MainScreen>} />
+          {/* Catch-all for unknown routes */}
+          <Route
+            path="*"
+            element={
+              <div className="flex flex-col items-center justify-center h-screen text-gray-700">
+                <h1 className="text-4xl font-bold mb-4">404</h1>
+                <p className="text-lg">Page Not Found</p>
+              </div>
+            }
+          />
+
+        </Routes>
+      </BrowserRouter>
+    </MenuProvider>
   );
 }
